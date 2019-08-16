@@ -1,0 +1,796 @@
+---
+title: "SSASM Networks"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+  slidy_presentation: default
+  ioslides_presentation:
+    smaller: yes
+    widescreen: yes
+  revealjs::revealjs_presentation:
+    theme: league
+---
+
+```{r setup, include=FALSE}
+library(igraph)
+library(lattice)
+library(Matrix)
+library(rgdal)
+library(ggplot2)
+library(readstata13)
+library(foreign)
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Networks 1 Obi
+
+## Learning Objectives
+
+What are the three main take aways from today?
+
+* Defining graphs: nodes, edges and the adjacency matrix.
+* Directed vs undirected graphs
+* Connected graphs
+* Calculating node degree
+* Shortest paths and diameter
+* Performing the above calculations on the London Tube network
+
+Possible useful resource: https://kateto.net/wp-content/uploads/2016/01/NetSciX_2016_Workshop.pdf
+
+
+## Sample data
+
+"A network is, in its simlpest form, a collection of points joined together in pairs by lines"
+M.E.J Newman, Networks, An Introduction
+
+There are many systems that can be usefully thought of as networks. For example:
+
+* The internet (computers joined together by data connections)
+* Food webs (animals and plants joined by preditor-prey relationships)
+* Transport networks (intersections joined by roads or stations joined by trains)
+* Economic networks (businesses joined by transactions)
+
+
+Consider hypothetical Twitter data. Each column representing who that person follows.
+
+```{r}
+
+dfTwitter <- data.frame("Bonnie" = c(0,0,0,1,1), 
+                        "Matt" = c(1,0,0,1,0),
+                        "Elsa" = c(0,1,0,0,1),
+                        "Neave" = c(1,0,0,0,0),
+                        "Obi" = c(0,1,1,0,0),
+                        row.names = c("Bonnie", "Matt", "Elsa", "Neave", "Obi"))
+
+dfTwitter
+```
+
+From this we see that Bonnie follows Neave and Obi, Matt follow Bonnie and Neave, etc...
+
+Now create an iGraph graph object from this data
+```{r}
+graphTwitter <- graph_from_adjacency_matrix(as.matrix(dfTwitter))
+plot(graphTwitter)
+
+```
+
+Some important definitions to introduce here are:
+
+**Graph**
+
+A Graph is a mathematical representation of a network, with n nodes and m edges, as seen above. In this example, the nodes represent Twitter accounts and the edges represent following relationships between the accounts.
+
+Nodes (Vertices)
+```{r}
+V(graphTwitter)
+```
+
+Edges
+```{r}
+E(graphTwitter)
+```
+
+An equivalent representation of this network is the edge list, with edges pointing from the nodes in columns 1 to the nodes in column 2.
+```{r}
+get.edgelist(graphTwitter)
+```
+
+
+**Adjacency matrix**
+
+Another equivalent, and frequently used representation of a network is the adjacency matrix.
+
+In iGraph the convention for adjacency matrix elements is (some textbooks use the reverse convention)
+
+$$A_{ij} = \begin{cases} 1, & \text{if there is an edge from node i to j}\\
+      0, & \text{otherwise}
+      \end{cases}$$
+
+In this case, the dataframe used to create the network is essentially the adjacency matrix:
+```{r}
+get.adjacency(graphTwitter)
+```
+
+$A_{Bonnie,Matt} = 1$
+
+```{r}
+graphTwitter['Bonnie','Matt'] # as.matrix(get.adjacency(graphTwitter))['Bonnie','Matt'] also works 
+```
+
+
+**Directed Graph**
+
+This is a directed graph meaning that node j might be connected to node i, but node i might not be connected to node j.
+
+Directed graphs have adjacency matrices that are not symmetric
+```{r}
+isSymmetric(get.adjacency(graphTwitter))
+```
+
+Bonnie is connected to Matt but Matt is not connected to Bonnie
+```{r}
+print(graphTwitter['Bonnie','Matt'])
+print(graphTwitter['Matt','Bonnie'])
+```
+
+
+## Sample analysis
+
+With the information about our social network represented as a Graph, we can perform some analysis.
+
+**Node degree**
+
+Undirected graph: the number of links attached to a node
+$k_i = \sum_{i=1}^{n}A_{ij} = \sum_{j=1}^{n}A_{ij}$
+
+Directed graph: either the number of 'in' links or 'out' links attached to a node.
+
+In degree: number of links pointing to you
+$k_{i}^{in} = \sum_{j=1}^{n}A_{ij}$
+
+Out degree: number of links you point to
+$k_{j}^{in} = \sum_{i=1}^{n}A_{ij}$
+
+In degree of the Twitter Graph
+```{r}
+degree(graphTwitter, mode = "in")
+```
+
+Out degree
+```{r}
+degree(graphTwitter, mode = "out")
+```
+
+
+**Paths**
+
+A path is a sequence of nodes such that each node is connected to the next node. For example: ['Bonnie', 'Neave', 'Matt', 'Elsa'].
+
+The shortest path is the shortest possible path between any two nodes.
+
+['Bonnie', 'Neave', 'Matt', 'Elsa'] is a path from Bonnie to Elsa but the shortest path is...
+```{r}
+shortest_paths(graphTwitter, 'Bonnie', to = 'Elsa', 
+               mode = "out", weights = NULL, output = c("vpath", "epath", "both"),
+               predecessors = FALSE, inbound.edges = FALSE)
+```
+
+or use mode="in" to find the shortest path from the 'to' node to the 'from' node
+```{r}
+shortest_paths(graphTwitter, 'Bonnie', to = 'Elsa', 
+               mode = "in", weights = NULL, output = "vpath",
+               predecessors = FALSE, inbound.edges = FALSE)
+```
+
+
+**Connected**
+
+A Graph is connected if it is possible to reach any node from any other node. Directed graphs can be 'strongly' or 'weakly' connected. 
+
+* Strongly connected: it is possible to reach every node from every other node whilst following the directions of the edges
+* Weakly connected: it is possible to reach every node only if the directions of the edges are disregarded (treat as undirected graph)
+
+
+The Twitter graph is strongly connected (which means it is also weakly connected)
+```{r}
+is.connected(graphTwitter, mode = "strong")
+```
+
+**Diameter**
+
+The diameter of the network is the length of the longest shortest path.
+```{r}
+diameter(graphTwitter)
+```
+
+
+For only weakly connected directed graphs the diameter is infinite (since it is not possible to connect some node pairs) and so a slightly different definition of diameter must be used.
+
+
+## Real World Example
+
+Use GIS data of the London Underground to produce graph representing the tube network.
+
+Stations -> Nodes
+Connections between stations -> Edges
+
+**Read the shapefile data**
+
+Linestrings with each end being the coordinates of a station
+```{r}
+dir_data <- ".\\data\\underground"
+sfTube <- readOGR(dsn = dir_data, "underground")
+```
+
+The data contain line strings between the coordinates of tube stations
+```{r}
+head(sfTube@lines)
+```
+
+and attributes of the linestrings
+```{r}
+head(sfTube@data)
+```
+
+
+**Create a graph from the data**
+
+Use the attribute data from the shape file to create a graph representing the tube network.
+
+```{r}
+dfTube <-  sfTube@data
+dfTubeGraph <- data.frame(i = dfTube$station_1, j = dfTube$station_2, distance = dfTube$distance)
+graphTube <- graph_from_data_frame(dfTubeGraph, directed = FALSE)
+head(get.edgelist(graphTube))
+```
+
+
+**Add node attribute to the graph**
+
+Process the data to get the coordinates, names, and ids of all stations
+
+
+```{r}
+# fortify extracts x and y coordinates from the points that make up the linestrings and the id of the linestring the points belong to
+sfTube.f=fortify(sfTube)
+
+# Create id column that matches the ids of the linestrings
+dfTube$id <- as.numeric(as.character(dfTube$toid_seq)) - 1
+
+# Join the coordinates to the data from the shape file using the id column
+dfMergedTube <- merge(sfTube.f, dfTube, by.x = "id", by.y = "id")
+
+# Separate out the first and second stations and stack these on top of one another in one long dataframe.
+firstStation <- dfMergedTube[dfMergedTube$order == 1,]
+secondStation <- dfMergedTube[dfMergedTube$order == 2,]
+
+firstStation <- data.frame(id=firstStation$station_1, name = firstStation$station_1_, lat = firstStation$lat, long = firstStation$long)
+secondStation <- data.frame(id=secondStation$station_2, name = secondStation$station_2_, lat = secondStation$lat, long = secondStation$long)
+
+dfStations <- rbind(firstStation, secondStation) %>% unique()
+head(dfStations)
+
+```
+
+
+Find the index at which each vertex appears in the dataframe of stations and use this to assign names and positions to the verticies
+```{r}
+# Since the vertices don't have names yet, V(graphTube)$name returns a vector of vertex ids
+v_pos = match(V(graphTube)$name, as.character(dfStations$id))
+
+# Use the vector of positions to get the node names and coordinates ordered the same as they are in the graph
+vector_names <- dfStations$name[v_pos]
+vector_coords <- dfStations[v_pos,]
+
+graphTube <- set.vertex.attribute(graphTube, "name", index = V(graphTube), value = as.character(vector_names))
+graphTube <- set.vertex.attribute(graphTube, "x", index = V(graphTube), value = as.numeric(vector_coords$long))
+graphTube <- set.vertex.attribute(graphTube, "y", index = V(graphTube), value = as.numeric(vector_coords$lat))
+```
+
+
+Nodes now all have name, x, and y attributes
+```{r}
+print(get.vertex.attribute(graphTube, "name", 11))
+print(get.vertex.attribute(graphTube, "x", 11))
+print(get.vertex.attribute(graphTube, "y", 11))
+```
+
+
+## Numeric Results
+
+
+This graph is undirected and connected.
+```{r}
+print(isSymmetric(get.adjacency(graphTube)))
+print(is.connected(graphTube))
+```
+
+
+The graph includes an edge attribute for each edge - 'distance' - taken from the distance between stations
+```{r}
+get.edge.attribute(graphTube)$distance[1:10]
+```
+
+
+Show adjacency matrix with and without weights (topographic vs weighted)
+
+For cases where there are multiple edges between nodes, the inclusion of weights can be misleading.
+```{r}
+get.adjacency(graphTube)[1:10,1:10]
+```
+
+```{r}
+get.adjacency(graphTube, attr = "distance")[1:10,1:10]
+```
+
+From this we see there are two connections between station 87 and 49. Check this in the data.
+```{r}
+dfTube[dfTube$station_1 == 49,]
+```
+
+
+**Degree distribution**
+
+Calculate degree distribution of the tube network
+```{r Numeric_Result, echo=FALSE}
+hist(degree(graphTube))
+```
+
+**Shortest paths and diameter**
+
+A connected graph is one in which every node can be reached by every other node.
+
+Calculate the shortest path between nodes (crude since the weights are distances and not travel times)
+```{r}
+startNode = V(graphTube)["Stockwell"]
+endNode = V(graphTube)["Mile End"]
+shortest_paths(graphTube, startNode, to = endNode, weights = get.edge.attribute(graphTube)$distance, output = "vpath")
+```
+
+Calculate the diameter with and without using the distance as the weight.
+```{r}
+print(diameter(graphTube, directed = FALSE, unconnected = FALSE, weights = NULL))
+print(diameter(graphTube, directed = FALSE, unconnected = FALSE, weights = get.edge.attribute(graphTube)$distance))
+```
+
+
+Plot the graph
+```{r}
+graphTube=simplify(graphTube,remove.loops = T,remove.multiple = T,edge.attr.comb = "min")
+plot(graphTube,vertex.size=3,vertex.color="red",vertex.label.cex=.1)
+```
+
+
+## Further Reading
+
+Resources from a workshop on networks and iGraph: https://kateto.net/wp-content/uploads/2016/01/NetSciX_2016_Workshop.pdf
+
+[Rmarkdown Cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)
+
+
+# Networks 2 Elsa
+
+## Learning Objectives
+
+* Introduce two centrality measures: closeness centrality and betweeness centrality
+* Calculate these centrality measures for the karate club dataset
+* Introduce hierarchical clustering for community detection
+* Apply hierarchical clustering to the karate club dataset
+* Produce network from OSM data
+* Calculate centrality measures on this road network
+
+## Centrality
+
+Centrality is a measure of node importance.
+
+There are many different centrality measures:
+* Eigenvector centrality
+* Katz Centrality
+* Closeness centrality
+* Betweeness centrality
+
+Here we introduce Closeness and Betweenness Centrality
+
+**Closeness centrality**
+
+Let $d_{ij}$ be the geodesic distance (shortest path) between node i and j. The mean geodesic distance of node i is given by:
+$$l_{i} = \frac{1}{n}\sum_{j}d_{ij}$$
+
+The closenesscentrality of node i is defined as:
+$$C_{i} = \frac{1}{l_{i}} = \frac{n}{\sum_{j}d_{ij}}$$
+
+
+**Betweenness centrality**
+
+Define $n^{i}_{st}$ as:
+$$n^{i}_{st} = \begin{cases} 1, & \text{if vertex i lies on the geodesic path from s to t}\\
+      0, & \text{otherwise}
+      \end{cases}$$
+
+Then betweenness centrality can be defined as:
+$$x_{i} = \sum_{st}n^{i}_{st}$$
+
+However, there may be multiple geodesics from s to t so to account for this we normalise by the number of geodesics from s to t, $g_{st}$:
+$$x_{i} = \sum_{st}\frac{n^{i}_{st}}{g_{st}}$$
+
+## Sample data
+
+Load Karate club graph
+
+Compute closeness and betweeness centralities
+
+## Hierarchical clustering 
+
+Steps to hierarchical clustering using centrality
+
+1. Define centrality measure
+
+2. Commpute centrality measure
+
+3. Iteratively remove edges based on centrality until all links are removed
+
+4. Identify set of disconnected components that maximise modularity - these are the communities
+
+Modularity is defined as:
+
+
+Run edge.betweeness.community community detection algorithm
+
+
+There are many other community detection algorithms, eg:
+
+
+## Real world example
+
+Code for processing road network
+
+Calculating centrality measures on road network, how to interpret these.
+
+
+# Networks 3 Neave
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Economic-Complexity-Intro.png")
+```
+
+***
+
+## Learning Objectives
+
+What are the three main take aways from this session?
+
+* Understand how trade data can be used to model the capabilities of countries
+* Calculate Relative Compatative Advantage (RCA) for a country and product
+* Understand Product Space and how to use RCA to compute the proximity between products
+
+The analysis presented here follows the paper *The Product Space Conditions the Development of Nations* By C. A. Hidalgo, B. Klinger, A.-L. Barabási, R. Hausmann, Science Jul 2007
+
+It's a great paper and worth a read.
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Literature.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Measure-Economic-Complexity.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Scrabble-Analogy.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Economic-Compexity-Def.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Trade-Data.png")
+```
+
+***
+
+## Trade Data
+
+Access world import and export data from the United Nations here: https://cid.econ.ucdavis.edu/nberus.html.
+
+See page 48 of the documentation (.\\data\\wtf99\\NBER-UN_Data_Documentation_w11040.pdf) for an explanation of the variables.
+
+```{r}
+# Load world import and export data from 1999
+wtf_data <- ".\\data\\wtf99\\wtf99.dta"
+dfWorldTrade <- read.dta13(wtf_data)
+head(dfWorldTrade)
+```
+
+Products are differentiated by their sitc4 code
+
+```{r}
+# 1263 different product codes includes 1 blank code so 1262 in reality
+length(unique(dfWorldTrade$sitc4))
+```
+```{r}
+# 188 unique exporter countries
+length(unique(dfWorldTrade$ecode))
+```
+
+Some data cleaning steps here
+```{r}
+# Remove invalid product codes and select only the columns we are interested in
+dfWorldTrade <- dfWorldTrade[dfWorldTrade$sitc4 !="",c("ecode","sitc4","value")]
+head(dfWorldTrade)
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-RCA.png")
+```
+
+***
+
+## Revealed Comparative Advantage
+
+Group by country and product and calculate the value of each county's exports by product
+```{r}
+# Aggregate the data
+dfWTCountryAgg <- aggregate(dfWorldTrade$value, by = list(dfWorldTrade$ecode), sum, na.rm = TRUE)
+dfWTCountryProdAgg <- aggregate(dfWorldTrade$value, by = list(dfWorldTrade$ecode, dfWorldTrade$sitc4), sum, na.rm = TRUE)
+dfWTProductAgg <- aggregate(dfWorldTrade$value, by = list(dfWorldTrade$sitc4), sum, na.rm = TRUE)
+globalSum <- sum(dfWorldTrade$value)
+
+# Rename the columns
+colnames(dfWTCountryAgg) <- c("ecode", "etotal")
+colnames(dfWTProductAgg) <- c("sitc4", "ptotal")
+colnames(dfWTCountryProdAgg) <- c("ecode", "sitc4", "eptotal")
+```
+```{r}
+head(dfWTCountryAgg)
+```
+```{r}
+head(dfWTProductAgg)
+```
+
+
+```{r}
+head(dfWTCountryProdAgg)
+```
+
+Join these datasets together and use this to calculate RCA
+```{r}
+dfRCA <- merge(dfWTCountryProdAgg, dfWTCountryAgg, by ="ecode")
+dfRCA <- merge(dfRCA, dfWTProductAgg, by="sitc4")
+dfRCA$prod_in_country_share <-  dfRCA$eptotal / dfRCA$etotal
+dfRCA$prod_in_global_share <- dfRCA$ptotal / globalSum
+dfRCA$rca = dfRCA$prod_in_country_share / dfRCA$prod_in_global_share
+head(dfRCA)
+```
+
+RCA > 1 means that this product makes up a greater share of this country's exports than the "average" country.
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Relatedness.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Path-dependence.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-The-Product-Space.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Exports.png")
+```
+
+***
+
+## The Product Space
+
+To calculate the proximity between products we use RCA as an indication of whether a country exports a product or not. If a country has an RCA > 1 for a product it is considered to export that product.
+
+Using this the coditional probability of a product being exported given another product being exported is given by:
+
+$$P(product_{i} | product_{j}) = \frac{\text{number of countries exporting i and j}}{\text{number of countries exporting j}}$$
+
+```{r}
+# Number of counties exporting each product
+dfRCA$is_exported <- as.numeric(dfRCA$rca > 1)
+dfNExport <- aggregate(dfRCA$is_exported, by = list(dfRCA$sitc4), sum)
+head(dfNExport)
+```
+
+
+```{r}
+# Number of countries exporting product paris
+# This block takes a long time to run. To save time (and avoid crashing your computer), you can read the data from csv using the next block instead.
+
+#dfPairs <- merge(dfRCA, dfRCA, by = "ecode")
+#dfPairs$joint_export <-  as.numeric((dfPairs$is_exported.x == 1) & (dfPairs$is_exported.y ==1))
+#dfNJointExport <- aggregate(dfPairs$joint_export, by = list(dfPairs$sitc4.x,dfPairs$sitc4.y), sum)
+#write.csv(dfNJointExport, ".\\data\\product_joint_export_counts.csv", row.names=FALSE)
+#head(dfNJointExport)
+```
+
+```{r}
+dfNJointExport <- read.csv(".\\data\\product_joint_export_counts.csv")
+head(dfNJointExport)
+```
+
+
+Use these two tables to computer the conditional probabilities
+```{r}
+dfConditional <- merge(dfNJointExport, dfNExport, by = 'Group.1')
+dfConditional$pij <- dfConditional$x.x / dfConditional$x.y
+head(dfConditional)
+```
+
+
+Now identify and select the minimum joint probability by joining the data frame of confitional probabilities to itself.
+```{r}
+# Merge the dfConditional dataframe to itself so that we can compare the joint probabilities P(export i | export j) to P(export j | export i)
+dfProximity <- merge(dfConditional, dfConditional, by.x = c("Group.1","Group.2"), by.y = c("Group.2", "Group.1"))
+dfProximity$pij.x.islower <- dfProximity$pij.x < dfProximity$pij.y
+head(dfProximity)
+```
+
+
+```{r}
+# We can check this merge has given us the right thing by checking the conditional probability value for Group.1 = "0015" and Group.2 = "0011" has been merged with the value for Group.1 = "0011" and Group.2 = "0015"
+dfConditional[(dfConditional$Group.1=="0015") & (dfConditional$Group.2 == "0011"),]
+```
+
+```{r}
+# Now select the lower conditional probabilities. The lower conditional probability is used as the proximity between two products
+dfProximity1 <- dfProximity[dfProximity$pij.x.islower ==TRUE, c("Group.1", "Group.2", "pij.x")]
+dfProximity2 <- dfProximity[dfProximity$pij.x.islower ==FALSE, c("Group.1", "Group.2", "pij.y")]
+
+colnames(dfProximity1) <- c("product1","product2", "proximity")
+colnames(dfProximity2) <- c("product1","product2", "proximity")
+
+dfProximity <- rbind(dfProximity1, dfProximity2)
+
+# Drop entries where product1 == product2 as the proximity is trivally 1
+dfProximity <- dfProximity[dfProximity$product1!=dfProximity$product2,]
+
+# Check for duplicates
+any(duplicated(dfProximity[,1:2]))
+```
+
+
+This dataframe can be used to build a network where the nodes are the products and the edge weights between products are the proximity.
+```{r}
+head(dfProximity)
+```
+
+Create an iGraph object from this edge list
+```{r}
+graphProdSpace <- graph_from_data_frame(dfProximity, directed = FALSE)
+```
+
+This is a very dense graph so plotting the whole thing will not be helpful. Instead lets look at teh Minimum Spanning Tree
+```{r}
+# Find the minimum spanning tree of this graph (really want maximum so would need to invert weights)
+graphMST <- minimum.spanning.tree(graphProdSpace, weights = get.edge.attribute(graphProdSpace)$proximity)
+```
+
+Even this is not particularly helpful
+```{r}
+plot(graphMST, vertex.size=3,vertex.color="red",vertex.label.cex=.1, )
+```
+
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-The-Product-Space-Figure.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Irelands-Exports.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Diversification.png")
+```
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Diversification-in-Product-Space.png")
+```
+
+## Diversification
+
+Calculate 'density' around products for a single country (eg UK)
+```{r}
+# First subsect the product space to consider only the products exported by a particular country, eg the UK
+
+# The data documentation (.\\data\\wtf99\\NBER-UN_Data_Documentation_w11040.pdf) contains a lookup from country name to country code. The UK is 538260
+
+# Get all products extored by the UK
+ukExports <- dfRCA[(dfRCA$is_exported == 1) & (dfRCA$ecode == "538260"),"sitc4"]
+
+# Using dfProximity as the edge list, remove connections to nodes not exported by the UK
+dfProximityUK <- dfProximity[dfProximity$product2 %in% ukExports,]
+
+# Now aggregate by product to get the weight contribution from UK exported products only
+dfStrengthUK <- aggregate(dfProximity$proximity, by = list(dfProximity$product1), sum)
+colnames(dfStrengthUK) <- c("product","strengthUK")
+head(dfStrengthUK)
+```
+
+```{r}
+head(ukExports)
+```
+```{r}
+length(ukExports)
+```
+
+
+```{r}
+length(unique(dfProximity$product1))
+```
+```{r}
+length(unique(dfProximity$product2))
+```
+```{r}
+length(unique(dfProximityUK$product2))
+```
+
+```{r}
+length(unique(dfStrengthUK$product))
+```
+
+```{r}
+# The denominator of the density of a node is given by the sum of its edge weights. This is similar to the node degree but instead we use the edge function
+strengthProdSpace <- strength(graphProdSpace,weights = get.edge.attribute(graphProdSpace)$proximity)
+
+dfStrength <- data.frame(product = names(strengthProdSpace), strength = strengthProdSpace)
+rownames(dfStrength) <- c(1:length(dfStrength$product))
+head(dfStrength)
+```
+
+
+```{r}
+# Now combine together and identify the high density products the UK does not export
+dfStrength <- merge(dfStrength, dfStrengthUK)
+dfStrength$density <- dfStrength$strengthUK / dfStrength$strength
+
+# Now select just the products that the UK doesn't export and rank by strength
+dfUKNotExp <- dfStrength[!(dfStrength$product %in% ukExports),]
+head(dfUKNotExp[with(dfUKNotExp, order(density)),])
+```
+
+
+***
+
+```{r echo=FALSE}
+include_graphics(".\\img\\UCL-Prediction-using-Density.png")
+```
+
+
