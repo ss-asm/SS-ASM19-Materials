@@ -1,0 +1,789 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Classification in Remote Sensing},
+            pdfauthor={Maxim Chernetskiy},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{Classification in Remote Sensing}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{Maxim Chernetskiy}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+      \predate{\centering\large\emph}
+  \postdate{\par}
+    \date{11/7/2019}
+
+
+\begin{document}
+\maketitle
+
+\hypertarget{learning-objective-5-minutes}{%
+\section{Learning Objective (5
+minutes)}\label{learning-objective-5-minutes}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  What is classification?
+\item
+  What types of classification are exist?
+\item
+  Two types of unsupervised classification
+\item
+  Supervised classification and evaluastion of the results
+\end{enumerate}
+
+\begin{verbatim}
+## rgeos version: 0.4-3, (SVN revision 595)
+##  GEOS runtime version: 3.6.1-CAPI-1.10.1 
+##  Linking to sp version: 1.3-1 
+##  Polygon checking: TRUE
+\end{verbatim}
+
+\begin{verbatim}
+## rgdal: version: 1.4-4, (SVN revision 833)
+##  Geospatial Data Abstraction Library extensions to R successfully loaded
+##  Loaded GDAL runtime: GDAL 2.2.3, released 2017/11/20
+##  Path to GDAL shared files: C:/Program Files/R/R-3.6.1/library/rgdal/gdal
+##  GDAL binary built with GEOS: TRUE 
+##  Loaded PROJ.4 runtime: Rel. 4.9.3, 15 August 2016, [PJ_VERSION: 493]
+##  Path to PROJ.4 shared files: C:/Program Files/R/R-3.6.1/library/rgdal/proj
+##  Linking to sp version: 1.3-1
+\end{verbatim}
+
+\begin{verbatim}
+## Loading required package: lattice
+\end{verbatim}
+
+\begin{verbatim}
+## Loading required package: latticeExtra
+\end{verbatim}
+
+\begin{verbatim}
+## Loading required package: RColorBrewer
+\end{verbatim}
+
+Classification is the essential part of remote sensing data processing.
+
+\hypertarget{unsupervise-classification-clustering-10-min}{%
+\section{Unsupervise classification (clustering) (10
+min)}\label{unsupervise-classification-clustering-10-min}}
+
+There are many unsupervised methods which have their advantages for
+different types of data. In the figure below you can see example of
+application of some of these methods to synthetic datasets.
+
+\begin{figure}
+\centering
+\includegraphics{clustering.png}
+\caption{imagename}
+\end{figure}
+
+Application of the four above methods for the landsat 8 Manchester scene
+\includegraphics{landsat_clust.png}
+
+\hypertarget{k-means-classification}{%
+\subsection{K-Means classification}\label{k-means-classification}}
+
+Open Landsat image and convert 2D matrix to 1D vector.
+
+Give names to the bands
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# hist(tif_stack)}
+\NormalTok{band_names <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'ultra-blue'}\NormalTok{, }\StringTok{'blue'}\NormalTok{, }\StringTok{'green'}\NormalTok{, }\StringTok{'red'}\NormalTok{, }\StringTok{'NIR'}\NormalTok{, }\StringTok{'SWIR1'}\NormalTok{, }\StringTok{'SWIR2'}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Create list of NDVI file paths}
+\NormalTok{lst_names <-}\StringTok{ }\KeywordTok{list.files}\NormalTok{(}\StringTok{"Manchester_RS_Notebook_and_Data/"}\NormalTok{, }\DataTypeTok{full.names =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{pattern =} \StringTok{"*[1-7].TIF$"}\NormalTok{)}
+\NormalTok{lst_names <-}\StringTok{ }\NormalTok{lst_names[}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{3}\NormalTok{,}\DecValTok{4}\NormalTok{,}\DecValTok{5}\NormalTok{,}\DecValTok{6}\NormalTok{,}\DecValTok{7}\NormalTok{,}\DecValTok{8}\NormalTok{)]}
+\NormalTok{b_stack0 <-}\StringTok{ }\KeywordTok{stack}\NormalTok{(lst_names)}
+\NormalTok{lst_names}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Manchester_RS_Notebook_and_Data/LC08_L1TP_203023_20190513_20190521_01_T1_B1.TIF"
+## [2] "Manchester_RS_Notebook_and_Data/LC08_L1TP_203023_20190513_20190521_01_T1_B2.TIF"
+## [3] "Manchester_RS_Notebook_and_Data/LC08_L1TP_203023_20190513_20190521_01_T1_B3.TIF"
+## [4] "Manchester_RS_Notebook_and_Data/LC08_L1TP_203023_20190513_20190521_01_T1_B4.TIF"
+## [5] "Manchester_RS_Notebook_and_Data/LC08_L1TP_203023_20190513_20190521_01_T1_B5.TIF"
+## [6] "Manchester_RS_Notebook_and_Data/LC08_L1TP_203023_20190513_20190521_01_T1_B6.TIF"
+## [7] "Manchester_RS_Notebook_and_Data/LC08_L1TP_203023_20190513_20190521_01_T1_B7.TIF"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{b_stack0}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## class      : RasterStack 
+## dimensions : 7981, 7891, 62978071, 7  (nrow, ncol, ncell, nlayers)
+## resolution : 30, 30  (x, y)
+## extent     : 451185, 687915, 5763885, 6003315  (xmin, xmax, ymin, ymax)
+## crs        : +proj=utm +zone=30 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+## names      : LC08_L1TP//1_01_T1_B1, LC08_L1TP//1_01_T1_B2, LC08_L1TP//1_01_T1_B3, LC08_L1TP//1_01_T1_B4, LC08_L1TP//1_01_T1_B5, LC08_L1TP//1_01_T1_B6, LC08_L1TP//1_01_T1_B7 
+## min values :                     0,                     0,                     0,                     0,                     0,                     0,                     0 
+## max values :                 65535,                 65535,                 65535,                 65535,                 65535,                 65535,                 65535
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# use row and column numbers:}
+\NormalTok{band_stack <-}\StringTok{ }\KeywordTok{crop}\NormalTok{(b_stack0, }\KeywordTok{extent}\NormalTok{(b_stack0, }\DecValTok{2314}\NormalTok{, }\DecValTok{2814}\NormalTok{, }\DecValTok{3047}\NormalTok{, }\DecValTok{3547}\NormalTok{))}
+
+\KeywordTok{names}\NormalTok{(band_stack) <-}\StringTok{ }\NormalTok{band_names}
+
+\CommentTok{#dev.new(width=10, height=4)}
+\KeywordTok{plot}\NormalTok{(band_stack, }\DataTypeTok{legend =} \OtherTok{FALSE}\NormalTok{, }\DataTypeTok{main=}\NormalTok{band_names)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{classification_max_final_files/figure-latex/unnamed-chunk-3-1.pdf}
+
+Convert stack of 2D matrices to an array of vectors
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{b_vec <-}\StringTok{ }\KeywordTok{getValues}\NormalTok{(band_stack)}
+\end{Highlighting}
+\end{Shaded}
+
+Look at the dimentionality of that vector.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{str}\NormalTok{(b_vec)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  int [1:251001, 1:7] 10199 10160 10092 10096 10153 10164 10144 10088 10028 10018 ...
+##  - attr(*, "dimnames")=List of 2
+##   ..$ : NULL
+##   ..$ : chr [1:7] "ultra.blue" "blue" "green" "red" ...
+\end{verbatim}
+
+Set seed
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{99}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Do classification
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{kmncluster <-}\StringTok{ }\KeywordTok{kmeans}\NormalTok{(}\KeywordTok{na.omit}\NormalTok{(b_vec), }\DataTypeTok{centers =} \DecValTok{10}\NormalTok{, }\DataTypeTok{iter.max =} \DecValTok{500}\NormalTok{, }\DataTypeTok{nstart =} \DecValTok{5}\NormalTok{, }\DataTypeTok{algorithm=}\StringTok{"Lloyd"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Look at the return value (str)
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{str}\NormalTok{(kmncluster)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## List of 9
+##  $ cluster     : int [1:251001] 10 10 10 10 6 5 7 7 7 7 ...
+##  $ centers     : num [1:10, 1:7] 11013 12006 15991 10828 10516 ...
+##   ..- attr(*, "dimnames")=List of 2
+##   .. ..$ : chr [1:10] "1" "2" "3" "4" ...
+##   .. ..$ : chr [1:7] "ultra.blue" "blue" "green" "red" ...
+##  $ totss       : num 5.28e+12
+##  $ withinss    : num [1:10] 7.74e+10 8.57e+10 1.43e+11 6.86e+10 6.54e+10 ...
+##  $ tot.withinss: num 8.15e+11
+##  $ betweenss   : num 4.46e+12
+##  $ size        : int [1:10] 54703 20149 1512 24959 31665 34882 6802 7639 45677 23013
+##  $ iter        : int 151
+##  $ ifault      : NULL
+##  - attr(*, "class")= chr "kmeans"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{knr <-}\StringTok{ }\KeywordTok{setValues}\NormalTok{(band_stack[[}\DecValTok{1}\NormalTok{]], kmncluster}\OperatorTok{$}\NormalTok{cluster)}
+\end{Highlighting}
+\end{Shaded}
+
+Convert returned vector to 2D raster
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{knr <-}\StringTok{ }\KeywordTok{setValues}\NormalTok{(band_stack[[}\DecValTok{1}\NormalTok{]], kmncluster}\OperatorTok{$}\NormalTok{cluster)}
+\end{Highlighting}
+\end{Shaded}
+
+Plot the result
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mycolor <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"#fef65b"}\NormalTok{,}\StringTok{"#ff0000"}\NormalTok{, }\StringTok{"#daa520"}\NormalTok{,}\StringTok{"#0000ff"}\NormalTok{,}\StringTok{"#0000ff"}\NormalTok{,}\StringTok{"#00ff00"}\NormalTok{,}\StringTok{"#cbbeb5"}\NormalTok{, }\StringTok{"#c3ff5b"}\NormalTok{, }\StringTok{"#ff7373"}\NormalTok{, }\StringTok{"#00ff00"}\NormalTok{, }\StringTok{"#808080"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{clara-classification}{%
+\subsection{CLARA classification}\label{clara-classification}}
+
+The CLARA (Clustering LARge Application) algorithm is based on the
+Partition Around Medoids (PAM) algorithm which is an implementation of
+K-medoids algorithm.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cccluster <-}\StringTok{ }\KeywordTok{clara}\NormalTok{(}\KeywordTok{na.omit}\NormalTok{(b_vec), }\DataTypeTok{k=}\DecValTok{10}\NormalTok{)}
+\NormalTok{clara_img =}\StringTok{ }\KeywordTok{setValues}\NormalTok{(band_stack[[}\DecValTok{1}\NormalTok{]], cccluster}\OperatorTok{$}\NormalTok{cluster)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{plot-the-results}{%
+\subsubsection{Plot the results}\label{plot-the-results}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(knr, }\DataTypeTok{main =} \StringTok{'K-means classification'}\NormalTok{, }\DataTypeTok{col =}\NormalTok{ mycolor )}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{classification_max_final_files/figure-latex/unnamed-chunk-13-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(clara_img, }\DataTypeTok{main =} \StringTok{'Clara classification'}\NormalTok{, }\DataTypeTok{col =}\NormalTok{ mycolor)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{classification_max_final_files/figure-latex/unnamed-chunk-13-2.pdf}
+
+\hypertarget{supervise-classification-10-min}{%
+\section{Supervise classification (10
+min)}\label{supervise-classification-10-min}}
+
+\hypertarget{classification-and-regression-trees-cart}{%
+\subsection{Classification and Regression Trees
+(CART)}\label{classification-and-regression-trees-cart}}
+
+Land Cover Map 2015 (LCM2015) will be used as reference data. LCM2015 is
+made using satellite data and cartographical information and provides
+land cover information for the UK.Spatial resolution 25m.
+
+0 Unclassified, 1 Broadleaved Woodland, 2 Coniferous Woodland, 3 Arable
+and Horticulture, 4 Improved Grassland, 5 Neutral Grassland, 6
+Calcareous Grassland, 7 Acid grassland, 8 Fen, Marsh and Swamp, 9
+Heather, 10 Heather grassland, 11 Bog, 12 Inland Rock, 13 Saltwater, 14
+Freshwater, 15 Supra-littoral Rock, 16 Supra-littoral Sediment, 17
+Littoral Rock, 18 Littoral sediment, 19 Saltmarsh, 20 Urban, 21
+Suburban.
+
+Setup class names and colors
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{lcm <-}\StringTok{ }\KeywordTok{brick}\NormalTok{(}\StringTok{'lcm2015_landsat_stack.tif'}\NormalTok{) }
+
+\CommentTok{# use row and column numbers:}
+\NormalTok{lcm <-}\StringTok{ }\KeywordTok{crop}\NormalTok{(lcm, }\KeywordTok{extent}\NormalTok{(lcm, }\DecValTok{2314}\NormalTok{, }\DecValTok{2814}\NormalTok{, }\DecValTok{3047}\NormalTok{, }\DecValTok{3547}\NormalTok{))}
+
+
+\KeywordTok{names}\NormalTok{(lcm) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"lcm2015"}\NormalTok{, }\StringTok{"prob"}\NormalTok{)}
+\CommentTok{# The class names and colors for plotting}
+\NormalTok{class_names <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"Broadleaved Woodland"}\NormalTok{, }\StringTok{"Coniferous Woodland"}\NormalTok{, }\StringTok{"Arable and Horticulture"}\NormalTok{, }\StringTok{"Improved Grassland"}\NormalTok{, }\StringTok{"Neutral Grassland"}\NormalTok{, }\StringTok{"Calcareous Grassland"}\NormalTok{, }\StringTok{"Acid grassland"}\NormalTok{, }\StringTok{"Fen, Marsh and Swamp"}\NormalTok{, }\StringTok{"Heather"}\NormalTok{, }\StringTok{"Heather grassland"}\NormalTok{, }\StringTok{"Bog"}\NormalTok{, }\StringTok{"Inland Rock"}\NormalTok{, }\StringTok{"Saltwater"}\NormalTok{, }\StringTok{"Freshwater"}\NormalTok{, }\StringTok{"Supra-littoral Rock"}\NormalTok{, }\StringTok{"Supra-littoral Sediment"}\NormalTok{, }\StringTok{"Littoral Rock"}\NormalTok{, }\StringTok{"Littoral sediment"}\NormalTok{, }\StringTok{"Saltmarsh"}\NormalTok{, }\StringTok{"Urban"}\NormalTok{, }\StringTok{"Suburban"}\NormalTok{)}
+
+\NormalTok{lcmclass <-}\StringTok{ }\KeywordTok{c}\NormalTok{()}
+
+\NormalTok{u_val =}\StringTok{ }\KeywordTok{unique}\NormalTok{(lcm[[}\DecValTok{1}\NormalTok{]])}
+\NormalTok{i =}\StringTok{ }\DecValTok{1}
+\ControlFlowTok{for}\NormalTok{ (v }\ControlFlowTok{in}\NormalTok{ u_val)\{}
+\NormalTok{  lcmclass <-}\StringTok{ }\KeywordTok{append}\NormalTok{(lcmclass, class_names[v])}
+\NormalTok{\}}
+
+
+\NormalTok{classdf <-}\StringTok{ }\KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{classvalue1 =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{8}\NormalTok{), }\DataTypeTok{classnames1 =}\NormalTok{ lcmclass)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{refere-data}{%
+\subsubsection{Refere data}\label{refere-data}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{unique}\NormalTok{(lcm[[}\DecValTok{1}\NormalTok{]])}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1]  1  3  4  5  6 12 14 20 21
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(lcm)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{classification_max_final_files/figure-latex/unnamed-chunk-15-1.pdf}
+
+Ratify (RAT = ``Raster Attribute Table'') the LCM2015 (define
+RasterLayer as a categorical variable).
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{lcm_rat <-}\StringTok{ }\NormalTok{lcm[[}\DecValTok{1}\NormalTok{]]}
+\NormalTok{lcm_rat <-}\StringTok{ }\KeywordTok{ratify}\NormalTok{(lcm_rat)}
+\NormalTok{rat <-}\StringTok{ }\KeywordTok{levels}\NormalTok{(lcm_rat)[[}\DecValTok{1}\NormalTok{]]}
+\NormalTok{rat}\OperatorTok{$}\NormalTok{landcover <-}\StringTok{ }\NormalTok{lcmclass}
+\KeywordTok{levels}\NormalTok{(lcm_rat) <-}\StringTok{ }\NormalTok{rat}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{generate-sample-sites}{%
+\subsubsection{Generate sample sites}\label{generate-sample-sites}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Load the training sites locations}
+\CommentTok{# Set the random number generator to reproduce the results}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{99}\NormalTok{)}
+\CommentTok{# Sampling}
+\NormalTok{samp <-}\StringTok{ }\KeywordTok{sampleStratified}\NormalTok{(lcm_rat, }\DataTypeTok{size =} \DecValTok{100}\NormalTok{, }\DataTypeTok{na.rm =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{sp =} \OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in .local(x, size, ...): only 7 cells found for stratum 6
+\end{verbatim}
+
+\begin{verbatim}
+## Warning in .local(x, size, ...): fewer samples than requested found for
+## stratum: 6
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{samp}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## class       : SpatialPointsDataFrame 
+## features    : 807 
+## extent      : 542580, 557580, 5918940, 5933910  (xmin, xmax, ymin, ymax)
+## crs         : +proj=utm +zone=30 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+## variables   : 2
+## names       :   cell, lcm2015 
+## min values  :     40,       1 
+## max values  : 250449,      21
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{table}\NormalTok{(samp}\OperatorTok{$}\NormalTok{lcm_rat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## < table of extent 0 >
+\end{verbatim}
+
+\hypertarget{load-the-lcm-color-table}{%
+\subsubsection{Load the LCM color
+table}\label{load-the-lcm-color-table}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cl =}\StringTok{ }\KeywordTok{read.table}\NormalTok{(}\StringTok{'j:}\CharTok{\textbackslash{}\textbackslash{}}\StringTok{satellite}\CharTok{\textbackslash{}\textbackslash{}}\StringTok{RS_workshop}\CharTok{\textbackslash{}\textbackslash{}}\StringTok{LCM2015}\CharTok{\textbackslash{}\textbackslash{}}\StringTok{lcm-2015-25m_3034373}\CharTok{\textbackslash{}\textbackslash{}}\StringTok{lcm2015gb25m.tif-Band_1.clr'}\NormalTok{, }\DataTypeTok{header =} \OtherTok{FALSE}\NormalTok{, }\DataTypeTok{sep =} \StringTok{""}\NormalTok{, }\DataTypeTok{dec =} \StringTok{"."}\NormalTok{)}
+
+\NormalTok{col_vector <-}\StringTok{ }\KeywordTok{c}\NormalTok{()}
+\ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \DecValTok{2}\OperatorTok{:}\KeywordTok{dim}\NormalTok{(cl)[}\DecValTok{1}\NormalTok{])\{}
+\NormalTok{  col_vector <-}\StringTok{ }\KeywordTok{append}\NormalTok{(col_vector, }\KeywordTok{rgb}\NormalTok{(cl[i, }\DecValTok{2}\NormalTok{]}\OperatorTok{/}\DecValTok{255}\NormalTok{, cl[i, }\DecValTok{3}\NormalTok{]}\OperatorTok{/}\DecValTok{255}\NormalTok{, cl[i,}\DecValTok{4}\NormalTok{]}\OperatorTok{/}\DecValTok{255}\NormalTok{))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{show-training-sites-distribution}{%
+\subsubsection{Show training sites
+distribution}\label{show-training-sites-distribution}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#detach("package:ggplot2", unload=TRUE)}
+\NormalTok{plt <-}\StringTok{ }\KeywordTok{levelplot}\NormalTok{(lcm_rat, }\DataTypeTok{col.regions =}\NormalTok{ col_vector[u_val], }\DataTypeTok{main =} \StringTok{'Training Sites'}\NormalTok{)}
+\KeywordTok{print}\NormalTok{(plt }\OperatorTok{+}\StringTok{ }\KeywordTok{layer}\NormalTok{(}\KeywordTok{sp.points}\NormalTok{(samp, }\DataTypeTok{pch =} \DecValTok{3}\NormalTok{, }\DataTypeTok{cex =} \FloatTok{0.5}\NormalTok{, }\DataTypeTok{col =} \DecValTok{1}\NormalTok{)))}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{classification_max_final_files/figure-latex/unnamed-chunk-19-1.pdf}
+
+\hypertarget{extract-values-for-sites}{%
+\subsubsection{Extract values for
+sites}\label{extract-values-for-sites}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Extract the layer values for the locations}
+\NormalTok{sampvals <-}\StringTok{ }\KeywordTok{extract}\NormalTok{(band_stack, samp, }\DataTypeTok{df =} \OtherTok{TRUE}\NormalTok{)}
+\CommentTok{# sampvals no longer has the spatial information. To keep the spatial information you use `sp=TRUE` argument in the `extract` function.}
+\CommentTok{# drop the ID column}
+\NormalTok{sampvals <-}\StringTok{ }\NormalTok{sampvals[, }\DecValTok{-1}\NormalTok{]}
+\CommentTok{# combine the class information with extracted values}
+\NormalTok{sampdata <-}\StringTok{ }\KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{classvalue =}\NormalTok{ samp}\OperatorTok{@}\NormalTok{data}\OperatorTok{$}\NormalTok{lcm2015, sampvals)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{show-the-tree}{%
+\subsubsection{Show the tree}\label{show-the-tree}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Train the model}
+\NormalTok{cart <-}\StringTok{ }\KeywordTok{rpart}\NormalTok{(}\KeywordTok{as.factor}\NormalTok{(classvalue)}\OperatorTok{~}\NormalTok{., }\DataTypeTok{data=}\NormalTok{sampdata, }\DataTypeTok{method =} \StringTok{'class'}\NormalTok{, }\DataTypeTok{minsplit =} \DecValTok{5}\NormalTok{)}
+\CommentTok{# Plot the trained classification tree}
+\KeywordTok{plot}\NormalTok{(cart, }\DataTypeTok{uniform=}\OtherTok{TRUE}\NormalTok{, }\DataTypeTok{main=}\StringTok{"Classification Tree"}\NormalTok{)}
+\KeywordTok{text}\NormalTok{(cart, }\DataTypeTok{cex =} \FloatTok{0.8}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{classification_max_final_files/figure-latex/unnamed-chunk-21-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Predict the subset data based on the model}
+\NormalTok{pr <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(band_stack, cart, }\DataTypeTok{type=}\StringTok{'class'}\NormalTok{)}
+\NormalTok{pr <-}\StringTok{ }\KeywordTok{ratify}\NormalTok{(pr)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{take-only-class-names-which-are-exist-in-the-classification-results}{%
+\subsubsection{Take only class names which are exist in the
+classification
+results}\label{take-only-class-names-which-are-exist-in-the-classification-results}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{rat1 <-}\StringTok{ }\KeywordTok{levels}\NormalTok{(pr)[[}\DecValTok{1}\NormalTok{]]}
+\NormalTok{class11 <-}\StringTok{ }\KeywordTok{c}\NormalTok{()}
+
+\NormalTok{i =}\StringTok{ }\DecValTok{1}
+\ControlFlowTok{for}\NormalTok{ (v }\ControlFlowTok{in}\NormalTok{ rat1}\OperatorTok{$}\NormalTok{ID)\{}
+\NormalTok{  class11 <-}\StringTok{ }\KeywordTok{append}\NormalTok{(class11, class_names[v])}
+\NormalTok{\}}
+\NormalTok{class11}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Broadleaved Woodland" "Improved Grassland"   "Inland Rock"         
+## [4] "Freshwater"           "Urban"                "Suburban"
+\end{verbatim}
+
+\hypertarget{plot-the-results-1}{%
+\subsubsection{Plot the results}\label{plot-the-results-1}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{rat1}\OperatorTok{$}\NormalTok{legend <-}\StringTok{ }\NormalTok{class11}
+\KeywordTok{levels}\NormalTok{(pr) <-}\StringTok{ }\NormalTok{rat1}
+
+\KeywordTok{levelplot}\NormalTok{(pr, }\DataTypeTok{maxpixels =} \FloatTok{1e6}\NormalTok{,}
+\DataTypeTok{col.regions =}\NormalTok{ col_vector[rat1}\OperatorTok{$}\NormalTok{ID],}
+\DataTypeTok{scales=}\KeywordTok{list}\NormalTok{(}\DataTypeTok{draw=}\OtherTok{FALSE}\NormalTok{),}
+\DataTypeTok{main =} \StringTok{"Decision Tree classification of Landsat 8"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{classification_max_final_files/figure-latex/unnamed-chunk-24-1.pdf}
+
+\hypertarget{results-evaluation}{%
+\subsection{Results evaluation}\label{results-evaluation}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{sampdata11 <-}\StringTok{ }\NormalTok{sampdata[sampdata}\OperatorTok{$}\NormalTok{classvalue}\OperatorTok{==}\NormalTok{rat1}\OperatorTok{$}\NormalTok{ID,]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in sampdata$classvalue == rat1$ID: longer object length is not a
+## multiple of shorter object length
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{99}\NormalTok{)}
+\NormalTok{j <-}\StringTok{ }\KeywordTok{kfold}\NormalTok{(sampdata11, }\DataTypeTok{k =} \DecValTok{5}\NormalTok{, }\DataTypeTok{by=}\NormalTok{sampdata11}\OperatorTok{$}\NormalTok{classvalue)}
+\KeywordTok{table}\NormalTok{(j)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## j
+##  1  2  3  4  5 
+## 18 23 19 23 18
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{sampdata11[sampdata11}\OperatorTok{$}\NormalTok{classvalue}\OperatorTok{==}\DecValTok{6}\NormalTok{,]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] classvalue ultra.blue blue       green      red        NIR       
+## [7] SWIR1      SWIR2     
+## <0 rows> (or 0-length row.names)
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{x <-}\StringTok{ }\KeywordTok{list}\NormalTok{()}
+\ControlFlowTok{for}\NormalTok{ (k }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\DecValTok{5}\NormalTok{) \{}
+\NormalTok{  train <-}\StringTok{ }\NormalTok{sampdata11[j}\OperatorTok{!=}\StringTok{ }\NormalTok{k, ]}
+\NormalTok{  test <-}\StringTok{ }\NormalTok{sampdata11[j }\OperatorTok{==}\StringTok{ }\NormalTok{k, ]}
+\NormalTok{  cart <-}\StringTok{ }\KeywordTok{rpart}\NormalTok{(}\KeywordTok{as.factor}\NormalTok{(classvalue)}\OperatorTok{~}\NormalTok{., }\DataTypeTok{data=}\NormalTok{train, }\DataTypeTok{method =} \StringTok{'class'}\NormalTok{, }\DataTypeTok{minsplit =} \DecValTok{5}\NormalTok{)}
+\NormalTok{  pclass <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(cart, test, }\DataTypeTok{type=}\StringTok{'class'}\NormalTok{)}
+  \CommentTok{# create a data.frame using the reference and prediction}
+\NormalTok{  x[[k]] <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(test}\OperatorTok{$}\NormalTok{classvalue, }\KeywordTok{as.integer}\NormalTok{(pclass))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{y <-}\StringTok{ }\KeywordTok{do.call}\NormalTok{(rbind, x)}
+\NormalTok{y <-}\StringTok{ }\KeywordTok{data.frame}\NormalTok{(y)}
+\KeywordTok{colnames}\NormalTok{(y) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'observed'}\NormalTok{, }\StringTok{'predicted'}\NormalTok{)}
+
+\NormalTok{conmat <-}\StringTok{ }\KeywordTok{table}\NormalTok{(y)}
+
+\CommentTok{# change the name of the classes}
+\KeywordTok{colnames}\NormalTok{(conmat) <-}\StringTok{ }\NormalTok{class11}
+\KeywordTok{rownames}\NormalTok{(conmat) <-}\StringTok{ }\NormalTok{class11}
+
+\NormalTok{conmat}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                       predicted
+## observed               Broadleaved Woodland Improved Grassland Inland Rock
+##   Broadleaved Woodland                    9                  2           0
+##   Improved Grassland                      3                  9           1
+##   Inland Rock                             2                  0          13
+##   Freshwater                              2                  1           2
+##   Urban                                   2                  1           1
+##   Suburban                                1                  0           1
+##                       predicted
+## observed               Freshwater Urban Suburban
+##   Broadleaved Woodland          5     1        0
+##   Improved Grassland            2     0        1
+##   Inland Rock                   1     0        1
+##   Freshwater                   10     1        1
+##   Urban                         1     8        4
+##   Suburban                      2     3       10
+\end{verbatim}
+
+\hypertarget{compute-the-overall-accuracy-and-the-kappa-statistic.}{%
+\subsubsection{Compute the overall accuracy and the ``Kappa''
+statistic.}\label{compute-the-overall-accuracy-and-the-kappa-statistic.}}
+
+\hypertarget{overall-accuracy}{%
+\paragraph{Overall accuracy:}\label{overall-accuracy}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# number of cases}
+\NormalTok{n <-}\StringTok{ }\KeywordTok{sum}\NormalTok{(conmat)}
+\NormalTok{n}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 101
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{## [1] 1600}
+\CommentTok{# number of correctly classified cases per class}
+\NormalTok{diag <-}\StringTok{ }\KeywordTok{diag}\NormalTok{(conmat)}
+\CommentTok{# Overall Accuracy}
+\NormalTok{OA <-}\StringTok{ }\KeywordTok{sum}\NormalTok{(diag) }\OperatorTok{/}\StringTok{ }\NormalTok{n}
+\NormalTok{OA}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.5841584
+\end{verbatim}
+
+\hypertarget{kappa}{%
+\paragraph{Kappa:}\label{kappa}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# observed (true) cases per class}
+\NormalTok{rowsums <-}\StringTok{ }\KeywordTok{apply}\NormalTok{(conmat, }\DecValTok{1}\NormalTok{, sum)}
+\NormalTok{p <-}\StringTok{ }\NormalTok{rowsums }\OperatorTok{/}\StringTok{ }\NormalTok{n}
+\CommentTok{# predicted cases per class}
+\NormalTok{colsums <-}\StringTok{ }\KeywordTok{apply}\NormalTok{(conmat, }\DecValTok{2}\NormalTok{, sum)}
+\NormalTok{q <-}\StringTok{ }\NormalTok{colsums }\OperatorTok{/}\StringTok{ }\NormalTok{n}
+\NormalTok{expAccuracy <-}\StringTok{ }\KeywordTok{sum}\NormalTok{(p}\OperatorTok{*}\NormalTok{q)}
+\NormalTok{kappa <-}\StringTok{ }\NormalTok{(OA }\OperatorTok{-}\StringTok{ }\NormalTok{expAccuracy) }\OperatorTok{/}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{-}\StringTok{ }\NormalTok{expAccuracy)}
+\NormalTok{kappa}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.500765
+\end{verbatim}
+
+\hypertarget{producer-and-user-accuracy}{%
+\paragraph{Producer and user
+accuracy}\label{producer-and-user-accuracy}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Producer accuracy}
+\NormalTok{PA <-}\StringTok{ }\NormalTok{diag }\OperatorTok{/}\StringTok{ }\NormalTok{colsums}
+\CommentTok{# User accuracy}
+\NormalTok{UA <-}\StringTok{ }\NormalTok{diag }\OperatorTok{/}\StringTok{ }\NormalTok{rowsums}
+\NormalTok{outAcc <-}\StringTok{ }\KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{producerAccuracy =}\NormalTok{ PA, }\DataTypeTok{userAccuracy =}\NormalTok{ UA)}
+\NormalTok{outAcc}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                      producerAccuracy userAccuracy
+## Broadleaved Woodland        0.4736842    0.5294118
+## Improved Grassland          0.6923077    0.5625000
+## Inland Rock                 0.7222222    0.7647059
+## Freshwater                  0.4761905    0.5882353
+## Urban                       0.6153846    0.4705882
+## Suburban                    0.5882353    0.5882353
+\end{verbatim}
+
+
+\end{document}
