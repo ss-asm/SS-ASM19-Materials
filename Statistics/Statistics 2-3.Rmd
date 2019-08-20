@@ -1,0 +1,655 @@
+---
+title: "Statistics"
+author: "Georg Hahn, Thomas Oléron Evans"
+date: "21 August 2019"
+output:
+  html_document: default
+  slidy_presentation: default
+  pdf_document: default
+  ioslides_presentation:
+    smaller: yes
+    widescreen: yes
+  revealjs::revealjs_presentation:
+    theme: league
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("reticulate")
+library(reticulate)
+library(knitr)
+library(plotly) # interactive visualisation
+library(RColorBrewer) # colours
+library(shiny) # R-based application
+library(heatmaply) # heat map using plotly environment
+use_virtualenv("r-reticulate")
+
+py_available(TRUE)
+```
+
+
+
+# Statistics 2 - Multiple Linear Regression, LASSO, and logistic regression
+
+# Learning objectives and motivation
+This tutorial serves to give a brief overview of several techniques to explain data with one or more characteristics (covariates). The tutorial looks at three cases:
+
+* The main focus will be on the generalisation of univariate (one variable) regression to multiple regression. If several characteristics may serve to explain the data, a very desired feature is "variable selection": considerable research has gone into methods which do not only fit a model, but select those variables which best explain the data at the same time, and mark the other variables as not needed. The learning objective is to be able to perform such variable selection and regression.
+* For the special case of binary outcomes, logistic regression allows us to fit the probability of success to observed data. The learning objective is to recognise the applicability of the logistic model and perform a fit.
+
+
+# Multiple linear regression and the LASSO
+This section revises univariate regression and gradually builds up to multivariate regression and the LASSO estimator. 
+
+## Univariate regression
+In the univariate case, we are interested in explaining a response $Y$ with one variable $X$ in a linear relationship:
+$$Y = a X + b.$$
+In this model, a single observation $X$ is used to explain the response $Y$. The coefficients $a$ and $b$ are unknown and are thus fitted to the data. As an example, consider the classic "mtcars" dataset in R:
+```{r}
+head(mtcars)
+```
+We suspect a linear relationship between the displacement (the volume of the pistons inside the engine; variable "disp") and the weight "wt". A plot of both shows a promising trend between the two variables:
+```{r}
+plot(x=mtcars$disp, y=mtcars$wt, main="Weight as a function of engine displacement")
+```
+
+We fit a linear model:
+```{r}
+linearMod <- lm(wt ~ disp, data=mtcars)
+summary(linearMod)
+```
+The $R$ summary gives us an estimate of the coefficient of the speed variable, together with a standard error, and the same for the intercept. This fixes the model at $Y = 1.60 + 0.007 X$. Before using this model, it is crucial to check if the fitted coefficients are significant: To each variable, a null hypothesis can be associated which claims that "$H_0$: The coefficient is zero" -- We want to reject the hypothesis in favour of the alternative, thus making the coefficient significant (or non-zero/ non-trivial) in the model. In the above, we have a strong significance for both coefficients.
+
+The fitted line is visualised as follows:
+```{r}
+plot(x=mtcars$disp, y=mtcars$wt, main="Weight as a function of engine displacement")
+x <- seq(0,600,length.out=100)
+lines(x,1.60+0.007*x,col="red")
+```
+
+A simple linear regression can also be done easily by hand. For this we observe that by definition, the coefficients $a$ and $b$ in the model $Y=aX+b$ have the property that they minimize $\sum_{i=1}^n (y_i-ax_i-b)^2$ (the squared difference between regression line and observed $y$ datapoints), where $(x_1,y_1),\ldots,(x_n,y_n)$ are the datapoints we are given. This so-called least squares minimisation can be solved analytically, leading to the estimates
+\begin{align*}
+\hat{a} &= \frac{\sum_{i=1}^n (x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^n (x_i-\bar{x})^2},\\
+\hat{b} &= \bar{y}-\hat{a}\bar{x},
+\end{align*}
+where $\bar{x}$ and $\bar{y}$ are the means of all $x$ datapoints and all $y$ datapoints, respectively.
+
+## Multiple linear regression
+Often, several variables might explain the data. For example, in the "mtcars" dataset, we might suspect that the fuel consumption "mpg" might be dependent on the cylinder count "cyl", displacement "disp", horsepower "hp", and weight "wt". We thus fit a linear model of the type
+$$mpg = a*cyl + b*disp + c*hp + d*wt + e,$$
+where each of "mpg", "cyl", "disp", "hp" and "wt" are vectors. In matrix notation, we can write our model in the form
+$$Y = aX+b,$$
+where $X$ is a matrix with four columns containing the data of each of the four covariates. A fit yields
+```{r}
+lfit <- lm(mpg ~ cyl + disp + hp + wt, data=mtcars)
+summary(lfit)
+```
+Again, "cyl" is very weakly significant, the weight "wt" is highly significant, and so is the intercept term. We expect those three terms to be included in the final model. The other variables are not significant and might be omitted from the final model.
+
+A standard problem in such scenarios is the following: What coefficient is small enough so that we can safely say that it is valid to neglect the variable in the model? This problem is known as variable selection. One way of addressing it is through hypothesis testing (as done with the $^{*}$, $^{**}$, $^{***}$ notation). Another elegant way is the LASSO estimator introduced in the next section.
+
+To end this subsection, the following 3D plot shows the relation of the variable "mpg" on the two significant variables "cyl" and "wt":
+```{r}
+evaluate <- function(x,y,f) {
+  z <- matrix(nrow=length(x),ncol=length(y),0);
+  for(i in 1:length(x)) {
+    for(j in 1:length(y)) {
+      z[i,j] <- f(x[i],y[j]);
+    }
+  }
+  return(z);
+}
+require(plot3D)
+x <- mtcars$cyl
+y <- mtcars$wt
+persp3D(x,y,evaluate(x,y,function(x,y) -1.29*x-3.85*y+40.83),theta=50,phi=25,col="darkred",ticktype="detailed",shade=0.75,ltheta=10,alpha=0.5,xlim=c(2,10),ylim=c(1,4),zlim=c(10,35),xlab="cyl",ylab="wt",zlab="mpg")
+points3D(x,y,mtcars$mpg,col="blue",pch=3,cex=1,add=T)
+```
+
+## The LASSO
+Main idea of LASSO: How can we do regression and variable selection at the same time?
+
+The least absolute shrinkage and selection operator (LASSO) is a variation of the commonly used ordinary least squares (OLS) estimator
+$$\hat{\beta} = \arg\min_\beta \left( \frac{1}{n} \Vert Y-X\beta \Vert_2^2 \right),$$
+where $n$ is the length of the response vector $Y \in \mathbb{R}^n$, $X \in \mathbb{R}^{n \times p}$ is the covariate matrix as introduced above, and $\beta \in \mathbb{R}^p$ is the linear coefficient vector to be fitted. Precisely this estimator has been used to perform the univariate and multivariate fits above.
+
+To address the problem of coefficients with almost non-zero values (which might or might not belong to the model), a penalty term is added to the OLS estimator:
+$$\hat{\beta}(\lambda) = \arg\min_\beta \left( \frac{1}{n} \Vert Y-X\beta \Vert_2^2 + \lambda \Vert \beta \Vert_1 \right).$$
+The penalty $\Vert \beta \Vert_1=\sum_{i=1}^p |\beta_i|$ is weighted with the parameter $\lambda>0$ (to be determined). The effect of the penalty term is as follows: If $\lambda=0$, we obtain the OLS problem. The larger $\beta$ is, the more we penalise non-zero coefficients, thus incentivising the fit to contain few non-zero coefficients. The interesting property of the LASSO is that the penalty makes some coefficients actually zero during the fitting process, and thus it performs variable selection and regression (on the non-zero variables) at the same time.
+
+Though originally defined for least squares, LASSO regularisation is easily extended to a wide variety of statistical models including generalised linear models, generalised estimating equations, and proportional hazards models.
+
+The package "glmnet" allows to apply the LASSO (use parameter "alpha=1" in function "glmnet"). The function returns a sequence of fitted models (fitted coefficients) for various values of $\lambda$:
+```{r}
+require(glmnet)
+c <- glmnet(as.matrix(mtcars[-1]), mtcars[,1], standardize=T, alpha=1)
+plot(c, xvar="lambda", xlab="log lambda", ylab="coefficient value", label=T)
+```
+
+The plot shows from right to left that as the value of $\lambda$ decreases towards zero, more and more variables enter the model (their value becomes non-zero): Thus via $\lambda$ we can control the **sparsity of the model** and select a model of suitable sparsity to us. Variable $5$ can be regarded as most likely belonging to the model as it enters the model first. We can use the value of $\lambda$ for a final fit at which no further variable enters the model and the coefficients of the existing variables in the model stabilise, e.g. $\lambda=\exp(-4)$.
+```{r}
+coef(c,s=exp(-4))
+```
+The above values are the final fit (note that the argument for the function "coef" is called "s" instead of "lambda"). A better way of obtaining $\lambda$ is the so-called "cross-validation": see the references in the appendix.
+
+The far left hand side of the "log lambda" plot above shows another crucial insight. Surely, the more variables we include, the better the fit becomes. However, we are prone to overfitting the model, not all variables are actually meaningful (or e.g.\ of several correlated variables we would only need to include one but we include them all), thus making the final result harder and harder to interpret. This is a classical tradeoff:
+
+|less variables | more variables|
+| :--- | :--- |
+|model captures less characteristics of the data | overfitting|
+|easy to interpret | hard to interpret|
+
+
+## Logistic regression
+The regression considered in the previous two sections considers $Y \in \mathbb{R}^n$, that is the response is continuous. Logistic regression is applicable if the response is binary, such as pass/fail or win/lose outcomes. Logistic regression can also be generalised to binomial, ordinal, or multinomial scenarios.
+
+Logistic regression analyses a model with binary outcomes by defining $p=P(Y=1)$, the probability of obtaining a success (pass, win, etc.), and by fitting the transformation
+$$l = \log_b \frac{p}{1-p} = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \ldots.$$
+As an example, we consider the example from [wikipedia](https://en.wikipedia.org/wiki/Logistic_regression): 
+```{r echo=F}
+tab <- matrix(c(0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50, 4.00, 4.25, 4.50, 4.75, 5.00, 5.50, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1), nrow=2, byrow=T) 
+rownames(tab) <- c("Hours","Pass")
+dat <- data.frame(t(tab))
+```
+
+```{r}
+print(dat)
+```
+
+The table shows the number of hours students work for an exam (first column) and the result of the examination (1=pass, 0=fail; second column). First, let's plot the data:
+```{r}
+plot(dat$Hours, dat$Pass, xlab="hours worked for the exam", ylab="pass=1, fail=0")
+x <- seq(0,6,length.out=100)
+lines(x, -0.1539 + 0.2346*x, col="blue")
+lines(x, exp(-4.1+1.5*x)/(1+exp(-4.1+1.5*x)), col="red")
+```
+
+The figure also displays two possible fit curves: the best linear fit (blue) and the logistic fit (red).
+
+The following shows how to obtain the red regression curve. We fit a linear model where, according to the logistic regression model, we treat the response variable as continuous quantity $\log_b \frac{p}{1-p}$: In order words, we assume that the zeros and ones we observe (passes and fails) are not really zeros and ones, but realisations of some quantity $\log_b \frac{p}{1-p}$ with underlying probability $p$.
+
+In $R$ we compute the following:
+```{r}
+logistic <- glm(Pass ~ Hours, data = dat, family="binomial")
+summary(logistic)
+```
+(Note the flag "family=binomial" --- this is because the binomial distribution encompasses the Bernoulli distribution with two outcomes as a special case, hence the $R$ command is more general.)
+
+The $R$ summary displays the fit of the model $\log \frac{p}{1-p} = \beta_0 + \beta_1 h$ to the data (since we only have one covariate), where $h$ shall denote the number of hours worked for the exam and $b=e$ is a fixed choice resulting in the natural logarithm (any other base works as well). From the fit we see that the model $\log \frac{p}{1-p} = -4.1 + 1.5 h$ best describes the data. The red curve in the above plot was computed using those coefficients $-4.1$ and $1.5$.
+
+Finally, we see that for any number of hours $h$ worked, the log-odds of passing the exam are given directly by the fitted linear model, that is
+$$\log \frac{p}{1-p} = -4.1 + 1.5h,$$
+and thus the odds of passing the exam are (after applying "exp" to both sides):
+$$\frac{p}{1-p} = \exp(-4.1+1.5h).$$
+Solving for the probability $p$ of passing the exam yields
+$$p = \frac{1}{1 + \exp \left[ -(\beta_0 + \beta_1 x_1 + \beta_2 x_2 + \ldots) \right]} = \frac{1}{1 + \exp \left[ -(-4.1+1.5h) \right]},$$
+thus for e.g. $h=2$ hours of exam preparation, the probability of passing is $0.75$.
+
+
+## Further Reading
+References on the simple linear regression, LASSO, the Glmnet library used to fit LASSO models:
+
+[Simple linear regression by hand](https://en.wikipedia.org/wiki/Simple_linear_regression)
+
+[Feature Selection using LASSO](https://pdfs.semanticscholar.org/24ac/d159910658223209433cf4cbe3414264de39.pdf)
+
+[Cross validation for LASSO](http://www.stat.cmu.edu/~ryantibs/datamining/lectures/18-val1.pdf)
+
+[Glmnet](https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html)
+
+[ANOVA](https://en.wikipedia.org/wiki/Analysis_of_variance)
+
+
+# Statistics 3 - Cluster Analysis
+
+This notebook was originally written in Jypiter notebooks.
+
+[Python in Rmarkdown](https://cran.r-project.org/web/packages/reticulate/vignettes/r_markdown.html)
+[more here..](https://rstudio.github.io/reticulate/)
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+#https://github.com/rstudio/rstudio/issues/4182 #to do with matplot
+
+import os
+# Set the path to be 'path-to_your_anaconda\anaconda3\Library\plugins\platforms'
+os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = 'C:\Anaconda3\Library\plugins\platforms'
+```
+## Learning Objectives
+1. Understand the concept of data standardisation and recognise different approaches.
+2. Understand the purpose of cluster analysis and know the algorithms for k-means and hierarchical clustering.
+3. Understand how SSE and silhouette scores can be used to assess the quality of a clustering.
+
+## Basic Concept
+```{r}
+include_graphics(".\\img\\statistics3\\Slide3.png")
+```
+
+<img src=".\\img\\statistics3\\Slide3.png" style="height:400px">
+
+```{python}
+df = pd.read_csv('.\\data\\tremor_data.csv')
+df.head()
+```
+
+## Data
+<img src=".\\img\\statistics3\\Slide6.png" style="height:400px">
+```{python}
+summary_stats = df.describe()
+np.round(summary_stats,decimals=1)
+```
+
+## Data
+<img src=".\\img\\statistics3\\Slide6.png" style="height:400px">
+
+```{python}
+df.plot.scatter(x='Time (mins)',y='Distance (m)')
+plt.show()
+```
+
+## Data Standardisation
+### Why standardise data?
+<img src=".\\img\\statistics3\\Slide8.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide9.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide10.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide11.png" style="height:400px">
+
+- Data in different units cannot be meaningfully compared without scaling.
+- How you scale your data can be very important.
+- Without standardisation, clustering may be dominated by the variable with the greatest range.   
+
+### Methods of Standardisation
+<img src=".\\img\\statistics3\\Slide13.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide14.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide15.png" style="height:400px">
+
+For a practical application of min-max rescaling and IDR standardisation, see:
+https://www.ons.gov.uk/methodology/geography/geographicalproducts/areaclassifications/2011areaclassifications/methodologyandvariables )
+
+<img src=".\\img\\statistics3\\Slide16.png" style="height:400px">
+
+```{python}
+df['Time (mins)'].hist()
+plt.show()
+```
+
+```{python}
+df['Distance (m)'].hist()
+plt.show()
+```
+
+We will choose z-score standardisation. Create new columns containing standardised versions of each of the variables and add these to the dataframe.
+
+Save this dataframe as 'new_tremor_data.csv'.
+
+```{python}
+# Get means and standard deviations from the .describe() dataframe
+
+stdevs = summary_stats.loc['std']
+means = summary_stats.loc['mean']
+
+# Create and add a standardised column for each column to the original dataframe :
+
+for col in df.columns:
+    df[col + '_standard'] = (df[col] - means[col])/ stdevs[col]
+
+# Save:
+
+df.to_csv('.\\data\\new_tremor_data.csv')
+```
+
+```{python}
+df.head()
+```
+
+```{python}
+df.plot.scatter(x='Time (mins)_standard',y='Distance (m)_standard')
+plt.show()
+```
+
+
+## Clustering Algorithms
+### K-Means Clustering
+<img src=".\\img\\statistics3\\Slide17.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide18.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide19.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide20.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide21.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide22.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide23.png" style="height:400px">
+
+Let's apply k-means to the tremors data, using all three dimensions: time, distance and magnitude:
+
+```{python}
+# Import the following packages:
+
+import numpy as np
+import sklearn.cluster as sklc
+
+# Take the relevant standardised data from the dataframe we created earlier:
+
+clustering_data = df.loc[:,['Time (mins)_standard','Distance (m)_standard','Size (Moment Magnitude)_standard']]
+
+# Choose number of clusters, e.g.:
+
+k = 6
+
+# Perform k-means 20 times, returning the best results as an output object:
+
+kmeans_output = sklc.KMeans(n_clusters=k, n_init=20).fit(clustering_data)
+
+# Ask the output object for the information you need:
+
+q6_cluster_ids = kmeans_output.labels_
+q6_cluster_cns = kmeans_output.cluster_centers_
+
+# Add the cluster ids to the dataframe:
+
+df['cluster_ids_kmeans'] = q6_cluster_ids
+
+# Inspect the results:
+print("Cluster Centroids:")
+print(np.round(q6_cluster_cns,decimals=1))
+
+df.head()
+```
+
+To understand these clusters, we need to visualise them:
+
+```{python}
+# Let's visualise these clusters in 2D plots, taking two variables at a time.
+# The plots show three views of the 3-dimensional data cloud.
+
+colours = ['r','b','g','m','k','c','y'] * 12
+icons   = ['o','x','s','.','v','^','<','>','*','+','D','d'] * 7
+
+
+def plot_clusters_for_two_variables(data,data_clusters,var1,var2,fignum):
+
+    plt.figure(fignum,figsize = (7,7))
+
+    for i in range(k):
+        
+        plt.figure(fignum)
+        data_this_cluster = data[data_clusters==i]
+        
+        plt.plot(data_this_cluster[var1],data_this_cluster[var2],colours[i] + icons[i])
+
+        plt.gca().set_aspect('equal')
+        plt.gca().set_xlim([-3,3])
+        plt.gca().set_ylim([-3,3])
+        
+        plt.gca().set_xlabel(var1)
+        plt.gca().set_ylabel(var2)
+
+    plt.savefig('.\\img\\statistics3\\clusters_' + str(fignum) +'.png')
+
+    plt.show()
+    
+cluster_ids = df['cluster_ids_kmeans']
+
+plot_clusters_for_two_variables(clustering_data,cluster_ids,'Time (mins)_standard','Distance (m)_standard',10)
+plot_clusters_for_two_variables(clustering_data,cluster_ids,'Time (mins)_standard','Size (Moment Magnitude)_standard',11)
+plot_clusters_for_two_variables(clustering_data,cluster_ids,'Distance (m)_standard','Size (Moment Magnitude)_standard',12)
+```
+
+
+```{python, chunk_3d}
+# Some 3D Plotting would be pretty handy here:
+
+from mpl_toolkits.mplot3d import Axes3D
+
+def plot_3D_clusters(data,data_clusters,var1,var2,var3,fignum):
+
+    fig = plt.figure(fignum,figsize = (12,12))
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i in range(k):
+        
+        plt.figure(fignum)
+        data_this_cluster = data[data_clusters==i]
+        
+        ax.scatter(data_this_cluster[var1],data_this_cluster[var2],data_this_cluster[var3],c=colours[i],marker=icons[i])
+
+        ax.set_aspect('equal')
+        ax.set_xlim([-3,3])
+        ax.set_ylim([-3,3])
+        ax.set_zlim([-3,3])
+        
+        plt.gca().set_xlabel(var1)
+        plt.gca().set_ylabel(var2)
+        plt.gca().set_zlabel(var3)
+
+    plt.savefig('.\\img\\statistics3\\3Dclusters_' + str(fignum) +'.png')
+
+    plt.show()
+
+cluster_ids = df['cluster_ids_kmeans']
+plot_3D_clusters(clustering_data,cluster_ids,'Time (mins)_standard','Distance (m)_standard','Size (Moment Magnitude)_standard',12121)
+
+```
+
+## Hierarchical Agglomerative Clustering
+<img src=".\\img\\statistics3\\Slide24.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide25.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide26.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide27.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide28.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide29.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide30.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide31.png" style="height:400px">
+```{python}
+# Import the following packages:
+import scipy.cluster.hierarchy as spch
+```
+
+```{python}
+num_clusters = 6
+cluster_allocations_hmaxclust = spch.fclusterdata(clustering_data, num_clusters, metric='euclidean', method='single',criterion='maxclust')
+```
+
+```{python}
+# A quick 3D visualisation of these clusters:
+cluster_ids = cluster_allocations_hmaxclust
+plot_3D_clusters(clustering_data,cluster_ids,'Time (mins)_standard','Distance (m)_standard','Size (Moment Magnitude)_standard',12121)
+```
+
+<img src=".\\img\\statistics3\\Slide32.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide33.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide34.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide35.png" style="height:400px">
+
+```{python, fig.width=8, fig.height=6}
+# Plotting a Dendrogram:
+
+Z = spch.linkage(clustering_data, method='single', metric='euclidean')
+plt.figure(30,figsize = (10,10))
+#semicols: https://stackoverflow.com/questions/28942969/is-there-a-python-equivalent-to-rs-invisible-function #prints extra stuff here.
+
+# Use dummy variable '_' here to prevent output of functions being printed. We are not interested in the output here.
+_ = spch.dendrogram(Z,p=20,truncate_mode='lastp',color_threshold=2,orientation='right');
+_ = plt.gca().set_xlim([0.3,1.3])
+_ = plt.gca().set_xticks(np.linspace(0.3,1.6,14))
+plt.gca().set_xlabel('r')
+plt.gca().set_ylabel('Cluster IDs')
+plt.savefig('.\\img\\statistics3\\tremor_hagglom_dendrogram.png')
+plt.show()
+```
+
+## Measuring Clustering Quality
+<img src=".\\img\\statistics3\\Slide36.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide37.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide38.png" style="height:400px">
+
+### Method 1 - SSE
+<img src=".\\img\\statistics3\\Slide40.png" style="height:400px">
+
+```{python}
+print('SSE for previous (3 variable) k-means clustering:', np.round(kmeans_output.inertia_,decimals=1))
+```
+
+<img src=".\\img\\statistics3\\Slide41.png" style="height:400px">
+
+### Method 2 - Silhouette Analysis
+<img src=".\\img\\statistics3\\Slide42.png" style="height:400px">
+
+```{python}
+# Import the following package:
+import sklearn.metrics as sklm
+```
+
+<img src=".\\img\\statistics3\\Slide43.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide44.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide45.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide46.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide47.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide48.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide49.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide50.png" style="height:400px">
+
+Shown above is a silhouette diagram for the two-dimensional data.
+
+Let's produce a silhouette diagram for the full three-dimensional tremors data:
+
+```{python}
+# Set range of k values:
+
+k_range = range(1,21)
+
+# Create (almost) empty lists to store the output:
+# (Cluster Allocations, SSE, Centroids, Silhouette scores)
+
+# (Almost) empty, because we start with one piece of missing data in position zero.
+# This is the data for zero clusters (i.e. an impossible case), and it means that the...
+# ... indices of the elements will match the number of clusters that they refer to:
+
+cluster_ids_series = [np.nan]
+cluster_sse_series = [np.nan]
+cluster_cns_series = [np.nan]
+cluster_shs_series = [np.nan]
+
+# Loop through k values:
+
+for k in k_range:
+    
+    # Perform k means as before:
+    
+    km_output = sklc.KMeans(n_clusters = k, n_init = 20).fit(clustering_data)
+
+    # Add the results to our lists:
+    
+    cluster_ids_series.append(km_output.labels_)
+    cluster_sse_series.append(km_output.inertia_)
+    cluster_cns_series.append(km_output.cluster_centers_)
+    
+    # Only add silhouettes if there is no error, since silhouettes cannot be calculated when, e.g...
+    # ... there is only one cluster or where some points are in their own clusters:
+    
+    try:
+        cluster_shs_series.append(sklm.silhouette_score(clustering_data,km_output.labels_))
+    except:
+        cluster_shs_series.append(0)
+
+# Build a dictionary of the quantities we need to report on and convert to a dataframe.
+# Also drop rows with missing data:
+report_dict = {'SSE':cluster_sse_series,'Silhouette Score':cluster_shs_series}
+report_df   = pd.DataFrame(report_dict,index=range(21))
+report_df   = report_df.dropna(how='any')
+
+# Find and report the optimal value of k:
+
+optimal_k_by_silhouette_score = report_df['Silhouette Score'].idxmax()
+optimal_silhouette_score      = report_df.loc[optimal_k_by_silhouette_score,'Silhouette Score']
+
+print('The optimal number of clusters, as determined by silhouette analysis, is ' + str(optimal_k_by_silhouette_score) + ".")
+print('The silhouette score for ' + str(optimal_k_by_silhouette_score) + " clusters is " + str(optimal_silhouette_score) + ".")
+
+report_df
+```
+
+```{python}
+# We will add the optimal cluster ids to the main dataframe:
+
+optimal_cluster_ids = cluster_ids_series[optimal_k_by_silhouette_score]
+df['optimal_kmeans_cluster_ids'] = optimal_cluster_ids
+```
+
+```{python}
+# Again, for the sake of interest, let's create an elbow plot and a silhouette plot:
+
+fignum = 20
+plt.figure(fignum,figsize = (7,7))
+plt.plot(report_df.index,report_df['SSE'],'b-')
+
+#plt.gca().set_aspect('equal')
+_ = plt.gca().set_xlim([0,20])
+_ = plt.gca().set_xticks(range(21))
+_ = plt.gca().set_ylim([0,1600])
+
+plt.savefig('.\\img\\statistics3\\elbow_plot' + str(fignum) +'.png')
+plt.show()
+
+fignum = 21
+plt.figure(fignum,figsize = (7,7))
+plt.plot(report_df.index,report_df['Silhouette Score'],'ro')
+
+_ = plt.gca().set_xlim([0,20])
+_ = plt.gca().set_xticks(range(21))
+_ = plt.gca().set_ylim([-1,1])
+
+plt.savefig('.\\img\\statistics3\\silhouette_plot' + str(fignum) +'.png')
+plt.show()
+```
+<img src=".\\img\\statistics3\\Slide51.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide52.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide53.png" style="height:400px">
+<img src=".\\img\\statistics3\\Slide54.png" style="height:400px">
+
+Using the optimal k-means clustering, print summary statistics for each of the clusters (i.e. the mean, standard deviation, min and max of each variable).
+
+```{python}
+# e.g. for kmeans:
+
+# Create an empty list for the separate dataframes:
+
+separate_cluster_dataframes = []
+
+# Create a list of the cluster id numbers:
+
+clusters = range(df['optimal_kmeans_cluster_ids'].max() + 1)
+
+# For each cluster, take a reduced version of the main dataframe, filtered to contain only that cluster. 
+
+for i in clusters:
+    separate_cluster_dataframes.append(df[df['optimal_kmeans_cluster_ids'] == i])
+
+# Create summary stats dataframes for each cluster:
+    
+separate_cluster_summary_stats = []
+
+for i in clusters:
+    separate_cluster_summary_stats.append(separate_cluster_dataframes[i].describe())
+```
+
+```{python}
+# e.g. for Cluster 0:
+
+separate_cluster_summary_stats[0]
+```
+
+```{python}
+plot_clusters_for_two_variables(clustering_data,df['optimal_kmeans_cluster_ids'],'Time (mins)_standard','Distance (m)_standard',100)
+plot_clusters_for_two_variables(clustering_data,df['optimal_kmeans_cluster_ids'],'Time (mins)_standard','Size (Moment Magnitude)_standard',101)
+plot_clusters_for_two_variables(clustering_data,df['optimal_kmeans_cluster_ids'],'Distance (m)_standard','Size (Moment Magnitude)_standard',102)
+```
+
+
+```{python}
+# A quick 3D visualisation of these clusters:
+plot_3D_clusters(clustering_data,df['optimal_kmeans_cluster_ids'],'Time (mins)_standard','Distance (m)_standard','Size (Moment Magnitude)_standard',12121)
+```

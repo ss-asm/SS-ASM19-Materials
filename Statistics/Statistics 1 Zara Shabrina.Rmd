@@ -1,0 +1,350 @@
+---
+title: "Statistic 1: Data Visualisation and Simple Linear Regression"
+author: "Zahratu Shabrina"
+date: "21 August 2019"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Aim
+
+This session aims to provide a brief overview of statistical computing and data visualisation using **Plotly**, **ggplot2** and **Shiny**. The **Plotly** graphics library provides a wide range of interactive visualisation that can be made using R and Python programming. In this tutorial, we'll be focusing on using R to produce our visualisation. **ggplot2** is a visualisation package for creating graphics by telling the package how to map variables into aesthetics and which of the graphical primitives to use. **Shiny** makes it possible to create interactive apps straight from R without web development skills.
+
+### Download the dataset
+
+Before starting this tutorial, download the dataset available thorugh the links below. You can also use your own dataset and tailor your analysis to your data. We are going to use Airbnb and London Profile & Atlas at Borough level. I have pre-processed the data so that each borough contains the number of Airbnb supply in the year 2019. The raw Airbnb data can be downloaded in this website: http://insideairbnb.com/get-the-data.html containing the point data of each Airbnb listing in the chosen cities, including London. The raw borough profile and atlas can be found in London Datastore https://data.london.gov.uk/dataset/london-borough-profiles.
+
+The pre-processed data (already aggregated into borough level) and already simplified for the tutorial can be found here.
+
+### Data
+* Airbnb data 2019 (borough level) https://drive.google.com/file/d/1DIZjQZYg2KFW_x7qXseIkrd5mN4a8A7G/view?usp=sharing
+* Borough profile and atlas(Greater London Authority - GLA)
+https://drive.google.com/file/d/1eK5KZLzWs5HW2xsFMstGTk1ylFEf8kzE/view?usp=sharing
+
+By the end of the session, you will be able to identify the methods of summarising and comparing data visually using: 
+
+### Methods
+* Box and Whisker Plot
+* Histogram
+* Scatter plots
+* Parallel Coordinates Plot
+* Donut Chart
+* Heatmap
+* Shiny web app
+
+### Getting started
+You should have R and R studio installed, if not:
+Open a web browser and go to http://cran.r-project.org and download and install it
+RStudio (download from http://rstudio.com)
+
+First, install the necessary libraries.
+```{r}
+#If you don't have these packages, uncomment and install them to your R program
+#install.packages("plotly")
+#install.packages("RColorBrewer")
+#install.packages("shiny")
+#install.packages("heatmaply")
+#install.packages("ggplot2")
+
+# Load the necessary libraries
+library(plotly) # Interactive visualisation
+library(RColorBrewer) # Colour pallette
+library(shiny) # R-based application
+library(heatmaply) # Heat map using plotly environment
+library(ggplot2) # Data visualisation package
+```
+
+Now that we have prepared the libraries that we need, we can load the necessary dataset. Because we have two different dataset, we will add the Airbnb data into Borough dataset using the match function.
+
+```{r}
+# Read in the necessary data set and prepare the data set 
+# IMPORTANT: download the data set to your local server and change the path to your local directory
+airbnb <- read.csv(".\\data\\Airbnb Borough 2019.csv")
+data <- read.csv(".\\data\\london-borough-profiles.csv")
+
+# Add Airbnb data into the borough dataset (data) based on the same column value (Borough Code)
+data$Airbnb <- airbnb$Airbnb[match(data$Code,airbnb$GSS_CODE)]
+```
+
+Now, we can start exploring our dataset to get a rough idea about the structure of the data. 
+
+```{r}
+# Display the summary statistic of the data for every variable of the dataset
+summary(data)
+# Notice that the factors are handled differently to numbers, and are given occurrence counts instead of the summary statistic (min, median, max, quartiles, etc.)
+```
+## Box and Whisker Plot
+
+Our first visualisation is the Box and Whisker plot. This plot can be used to represent statistical data based on the second and third quartiles. The vertical line inside the rectangle is used to indicate the median value and the horizontal lines on either side of the rectangle used to indicate both the lower and upper quartiles of the data.
+
+```{r}
+# Create the first box plot: Airbnb count
+box1 <- plot_ly(data, y=~Airbnb, 
+              name = "Airbnb count per-borough",
+              type="box")
+
+# Create the second box plot: Population density
+box2 <- plot_ly(data, y=~Population_density_2017, 
+              name="Population density 2017",
+              type="box")
+
+# Create the second box plot: Median house price
+box3 <- plot_ly(data, y=~Med_houseprice_2015, 
+              name="Median houseprice 2015",
+              type="box")
+
+# Arrange multiple box plots to be shown simultaneously 
+box <- subplot(box1, box2, box3)
+
+# Show the box plot in the interactive environment
+box
+```
+
+## Histogram
+
+Histogram breaks data into bins (or breaks), showing the frequency distribution of these bins.
+
+```{r}
+
+# Create the first histogram: Airbnb count
+hist <- plot_ly(data, x=~Airbnb, 
+                type="histogram",
+                name="Airbnb count per-borough 2019",
+                histnorm="probability")
+
+# Create the second histogram: Population density
+hist2 <- plot_ly(data, x=~Population_density_2017, 
+                type="histogram",
+                name="Population density 2017",
+                histnorm="probability")
+
+# Arrange multiple histograms to be shown simultaneously 
+plot_hist <- subplot(hist,hist2)
+
+# Show the histogram in the interactive environment
+plot_hist
+```
+
+## Scatter plot
+Scatter plot is a mathematical diagram to display values of the dataset as a collection of points in the horizontal and vertical axis.
+
+```{r}
+# Create scatter plot of Airbnb and Median Houseprice, the colour depends on the Airbnb count and the size represents the median house price
+scatter <- plot_ly(
+  data, x = ~Airbnb, y = ~Med_houseprice_2015,
+  type="scatter", mode="markers",
+  color=~Airbnb, size=~Med_houseprice_2015)
+
+# Show the scatter plot in the interactive environment
+scatter
+```
+
+## Parallel Coordinates Plot
+
+Parallel coordinates plot can be used to examine the relationship between variables where each variable is given its axes and placed parallel one another. 
+The downside: For a large dataset, sometimes they look too cluttered.
+Parallel coordinates plot is highly interactive, you can add constraints so the data only shows a certain range of values.
+
+```{r}
+
+par <- data %>%
+  plot_ly(width=750, height = 350) %>%
+  add_trace(type = 'parcoords',
+          line = list(color = ~Airbnb),
+          dimensions = list(
+            list(range = c(~min(Airbnb),~max(Airbnb)),
+                 label = 'Airbnb', values = ~Airbnb),
+            list(range = c(~min(Med_houseprice_2015),~max(Med_houseprice_2015)),
+                 label = 'Median House Price 2015', values = ~Med_houseprice_2015),
+            list(range = c(~min(Med_Income_Estimate_12.13),~max(Med_Income_Estimate_12.13)),
+                 label = 'Median Income Estimate 12/13', values = ~Med_Income_Estimate_12.13),
+            list(range = c(~min(Net_international_migration_2015),~max(Net_international_migration_2015)),
+                 label = 'Net International Migration 2015', values = ~Net_international_migration_2015),
+            list(range = c(~min(PTAL2014),~max(PTAL2014)),
+                 label = 'PTAL2014', values = ~PTAL2014)
+            )
+          )
+par 
+```
+
+
+## Donut Chart
+Donut chart visually shows the proportion of data in a way that is simple but informative.
+
+```{r}
+
+# Subset the boroughs only to include those with high Airbnb counts to be displayed in the donut chart
+data_subset <- subset(data, Airbnb > 1000)
+
+# Create the donut chart based on the subsetted data, you can change the size of the pie hole / change the values to get more familiar with how the donut chart works
+donut <- data_subset %>%
+  group_by(Area_name) %>%
+  plot_ly(labels = ~Area_name, values = ~Airbnb) %>%
+  add_pie(hole = 0.6) %>%
+  layout(title = "Airbnb per-borough",  showlegend = F,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+# Show the interactive donut chart in the widget
+donut
+```
+
+## Heatmap
+
+An interactive heatmap is a grid of coloured cells highlighting the patterns of our data accompanied by dendrograms. As other interactive visualisation, you can hover over the areas with your mouse to show the correlation values. Heatmaply is based on ggplot2 and plotly.js engine.
+
+We are going to visualise the correlations between 5 variables: Airbnb, Population Density, Net Natural Change (migration), Median House price, and Median Income Estimate. 
+
+```{r}
+# Remove # if you have not install heatmaply in your R environment
+#install.packages("heatmaply")
+library(heatmaply)
+
+# Subset the data to only include numeric data
+data_heatmap <- data[c(5:12)]
+
+# Create the heatmap showing the correlations between the five variables
+heatmap <- heatmaply(cor(data_heatmap), margins = c(50, 50),
+          k_col = 2, k_row = 2,
+          limits = c(-1,1))
+
+# Show the heatmap in an interactive environment
+heatmap
+```
+
+## Simple Linear Regression 
+A simple linear regression model describes the relationship between two variables x and y that can be expressed by the following equation. The numbers α and β are called parameters, and ϵ is the error term.
+
+$$ y = α + βx+ ϵ $$
+The lm function is applied to a formula that describes the variable House price by the variable Income estimate, and saves the linear regression model in a new variable Houseprice.lm.
+
+```{r}
+Houseprice.lm <- lm(Med_houseprice_2015 ~ Med_Income_Estimate_12.13, data = data)
+
+# Show the summary of the regression
+summary(Houseprice.lm)
+```
+
+Plot the linear regression result with the model fit.
+
+```{r}
+# Create regression line
+fit <- Houseprice.lm
+
+# Using plotly for regression
+data %>% 
+  plot_ly(x = ~Med_Income_Estimate_12.13) %>% 
+  add_markers(y = ~Med_houseprice_2015) %>% 
+  add_lines(x = ~Med_Income_Estimate_12.13, y = fitted(fit))%>%
+  # Change the X and Y axis label
+  layout(yaxis = list(title ="Median House Price"), xaxis = list(title ="Median Income Estimate"))
+```
+
+We have used plotly to visualise our data. Another convenient package for statistical programming in R is ggplot.
+
+```{r}
+p <- ggplot(data = data,aes(x=Med_Income_Estimate_12.13, y=Med_houseprice_2015)) + geom_point() + 
+  geom_smooth(method='lm',se = FALSE, color="black") +
+  xlab("Median Income Estimate 12-13") +
+  ylab("Median Houseprice 2015")
+p
+```
+
+## Shiny - an R based Interactive Web App 
+
+Now let's create a simple regression app using Shiny. We'll use Airbnb and Borough data. In this app, the user will be able to select variables for regression and display the outcome in a form of scatter plot and display the regression summary.
+
+The architecture of shiny always contains a user interface (ui), a server (backend) and app that can call the ui & server as an application.
+
+```{r}
+# In the UI, you can arrange how you want the website to appear and how to choose variables (slider, selectable, etc)
+ui <- fluidPage(
+  
+  # Application title
+  titlePanel("Simple Linear Regression using Airbnb and Borough Profile dataset"),
+  
+  # You can construct the application to have a side bar and main panel. The side bar will contain the dependent and independent variables while the main panel can be divided into several clickable tabs
+  
+  # Setting the side bar with a selection input for chosen variables
+  # Here is where we design the layout for our sidebar
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("Dependent", label=h3("Dependent Variable"), choices=list(
+        "Population Density" = "Population_density_2017",
+        "Airbnb" = "Airbnb",
+        "Median Houseprice" = "Med_houseprice_2015",
+        "Median Income Estimate" = "Med_Income_Estimate_12.13"
+      )),
+      selectInput("Independent", label=h3("Independent Variable"), choices=list(
+        "Population Density" = "Population_density_2017",
+        "Airbnb" = "Airbnb",
+        "Median Houseprice" = "Med_houseprice_2015",
+        "Median Income Estimate" = "Med_Income_Estimate_12.13"  
+      )),
+      h6("We can see the top Airbnb proportion in London"),
+    plotlyOutput("Donut")
+    ),
+    
+    # Now designing for the main panel to showcase the regression plot and summary
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Plot", plotOutput("Plot")),
+        tabPanel("Summary", verbatimTextOutput("Summary"))
+      )
+    )
+  ))
+
+# Server is all the analysis for the output. Everytime we select variable in the sidebar, R will work in the background and show the result 
+server <- function(input,output){
+  
+  # Creating the donut chart for the sidebar panel
+  output$Donut <- renderPlotly({data_subset %>%
+      group_by(Area_name) %>%
+      plot_ly(labels = ~Area_name, values = ~Airbnb) %>%
+      add_pie(hole = 0.6) %>%
+      layout(title = "Airbnb per-borough",  showlegend = F,
+             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+  })
+  
+  # Creating the regression plot
+  output$Plot <- renderPlot(
+    #plot(data[,input$Independent], data[,input$Dependent], main="Scatterplot")
+    ggplot(data = data, aes(x = data[,input$Independent], y = data[,input$Dependent])) + 
+      geom_point(color='black') +
+      geom_smooth(method = "lm", se = FALSE, color="black") + xlab(input$Independent) + ylab(input$Dependent)
+  )
+  
+  # Displaying the summary statistic for the regression 
+  output$Summary <- renderPrint({
+    fit <- lm(data[,input$Dependent] ~ data[,input$Independent])
+    names(fit$coefficients) <- c("Intercept", input$var2)
+    summary(fit)
+  })
+}
+
+# Run the application by calling ui and server as an application 
+shinyApp(ui = ui, server = server)
+```
+
+### Uploading you shiny app
+* Shinyapps.io
+* Shiny Server
+* RStudio Connect
+https://shiny.rstudio.com/articles/deployment-web.html
+
+Check the app that we just made by clicking on the link here https://zahratushabrina.shinyapps.io/Airbnb_Regression/
+
+### More to learn
+* Check more stuff you can do with plotly https://plot.ly/r/
+* The ggplot2 cheatsheet https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf
+* Some ggplot2 inspiration here http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html
+* Shiny gallery https://shiny.rstudio.com/gallery/
+
+
+
+
