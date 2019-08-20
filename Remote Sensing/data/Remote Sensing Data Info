@@ -1,0 +1,3 @@
+Data for the Remote Sensing portion of the CASA Summer School needs to be downloaded from this google drive folder: https://drive.google.com/open?id=1NPUAqw1VJ6_jUNfp7srtmdMg4Oh10CWr
+
+Once downloaded, unzip the data files into a sensible folder (for example Remote Sensing\\data\\) and set the "root_directory" variable in the R notebook to be teh path to this folder.
