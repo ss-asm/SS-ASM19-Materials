@@ -3,16 +3,16 @@
 title: "Spatial point processes"
 author: "David Murrell, UCL Centre for Biodiversity and Environment Research"
 output:
-  slidy_presentation: default
+  
+  html_document: default
   ioslides_presentation: default
   powerpoint_presentation: default
   beamer_presentation: default
-  
+  slidy_presentation: default
 fontsize: 12pt
 ---
 
 ```{r, include=FALSE}
-setwd("D:/Dropbox/PhD/Summer School/david")
 library(knitr)
 ```
 
@@ -29,7 +29,7 @@ The three main objectives of this session are
 
 
 ```{r}
-knitr::include_graphics("D:/Dropbox/PhD/Summer School/david/pp2.png")
+knitr::include_graphics(".\\img\\spatialstats3\\pp2.png")
 ```
 
 ## 1. Point processes
@@ -53,7 +53,7 @@ knitr::include_graphics("D:/Dropbox/PhD/Summer School/david/pp2.png")
   * Relate these to known processes?
 
 ```{r}
-knitr::include_graphics("D:/Dropbox/PhD/Summer School/david/pp2.png")
+knitr::include_graphics(".\\img\\spatialstats3\\pp2.png")
 ```
 
 **********************
@@ -64,7 +64,7 @@ knitr::include_graphics("D:/Dropbox/PhD/Summer School/david/pp2.png")
 3. **Aggregated/Clustered** -many points are concentrated close together, and large areas that contain very few, if any, points.
 
 ```{r}
-knitr::include_graphics("D:/Dropbox/PhD/Summer School/david/fig.png")
+knitr::include_graphics(".\\img\\spatialstats3\\fig.png")
 ```
 
 **CSR** is often the *null hypothesis*.
@@ -98,7 +98,7 @@ We now read in the tropical forest dataset from the Barro Colorado Island, off t
 
 
 ```{r bci_single, echo=T}
-load("bci.full7.rdata")
+load(".\\data\\bci.full7.rdata")
 ```
 
 It is always good to inspect the dataset. Here we find there are a lot of variables that have been measured, including species name, x- and x-coordinates, status (alive or dead), circumference of trunk at breast height (DBH), etc.
@@ -190,11 +190,9 @@ Today we will use the well established Ripley's K function to analyse the data. 
 
 ```{r}
 list.files()
-knitr::include_graphics("D:/Dropbox/PhD/Summer School/david/ripleysK.gif")
+knitr::include_graphics(".\\img\\spatialstats3\\ripleysK.gif")
 ```
-<center>
-![](CASA_2019/ripleysK.gif)
-</center>
+
 
 * Mathematically:
 
@@ -270,7 +268,7 @@ plot(res, main=sp_names[s])
 * However, we can take habitat preferences into account by using a **kernel density estimator** to create a surface that shows the local density. In 1 dimension,
 
 ```{r}
-knitr::include_graphics("kde.gif")
+knitr::include_graphics(".\\img\\spatialstats3\\kde.gif")
 ```
 
   

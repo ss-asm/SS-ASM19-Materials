@@ -1,0 +1,191 @@
+---
+title: "Spatial Statistics 1"
+author: "Boyana Buyuklieva"
+date: "August 20, 2019"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(raster)
+library(knitr)
+library(geojsonio)
+```
+
+# UK administrative Geographies
+
+The UK consists of four countries: England, Scotland, Wales and Norther Ireland (in order of population size). Great Britain reffers to the island that has the first three countries.Administrative data for the UK often follows country divides, although England and Wales are accounted for together for many things by the Office of National Statistics. Administrative geographies are one of 8 overarching types of statistical geographies, as seen below:
+
+```{r}
+include_graphics(".\\img\\spatialstats1\\Hierarchical_representaiton_UK_Stat_Geos.jpg")
+```
+
+![UK Stat Geogs](./Hierarchical_representaiton_UK_Stat_Geos.jpg)
+
+Broadly, administrative geographies are the most general purpose for the UK as this is the level at which policy is made. Also, Statistical Building Blocks constrainted are by these. For example, middle-level output areas (MSOAs) and all geographies below all aggregate to Local Authority Districts. Administrative geographies come in several levels of detail:
+
+```{r}
+#include_graphics(".\\img\\spatialstats1\\Admin_Geos.jpg")
+```
+
+![Admin](.\\img\\spatialstats1\\Admin_Geos.jpg)
+
+Worth noting about the Statistical Building Blocks is that they are derived from populations counts, not areas. Below is an overview of the threasholds used to create these geographies.
+
+```{r}
+#include_graphics(".\\img\\spatialstats1\\Admin_Geos_oas.jpg")
+```
+![Admin](.\\img\\spatialstats1\\Admin_Geos_oas.jpg)
+
+[More about these population weighted geographies here](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/bulletins/2011censuspopulationandhouseholdestimatesforsmallareasinenglandandwales/2012-11-23)
+
+## Getting Data 
+
+### Polygons
+You can get geographic data for the UK from the [open geography portal](http://geoportal.statistics.gov.uk/datasets/regions-december-2018-en-bfe) via an API call. This is convient because it means you don't have to store large files on your machine and can share your work easier. For simplicity we will use regions for example below. There are nine regions in England.
+
+
+```{r read_region, cache=TRUE}
+#connect to the open geography portal API
+regions_json <- geojson_read("https://opendata.arcgis.com/datasets/8d3a9e6e7bd445e2bdcc26cdf007eac7_1.geojson", what = "sp")
+z_regions_json <- regions_json
+plot(regions_json)
+```
+
+### Variables
+
+I'm using table WU02EW - Location of usual residence and place of work by age. This data is avaliable down to MSOA, but we will be using it at regional level for Engalnd. 
+
+```{r get_data, cache=TRUE}
+#Connect to the NOMIS API to get Data
+#Note: I'm only using England here for convience.
+t_wu02Ew  <- read.csv(file = "https://www.nomisweb.co.uk/api/v01/dataset/NM_1206_1.data.csv?date=latest&usual_residence=2013265921...2013265930&place_of_work=2013265921...2013265930&age=0...6&measures=20100", header=TRUE)
+kable(head(t_wu02Ew))
+```
+
+This dataset is currently a flat 2D table despite containing multi-way tabluated coutnms:  by **region**,**orgin**,**destination** and **age group**. To wrangle this into counts by geographic unit to use with the polygon data, we apply the following transformation.
+
+```{r}
+#names(t_wu02Ew )#Select only columns we need for now
+ac <- c("USUAL_RESIDENCE_CODE","AGE_NAME","OBS_VALUE")
+t_wu02Ew_ac <-t_wu02Ew[,ac]
+
+reg_var <- xtabs(OBS_VALUE ~ USUAL_RESIDENCE_CODE + AGE_NAME, data=t_wu02Ew_ac)
+reg_var <- as.data.frame.matrix(reg_var) 
+kable(reg_var)
+```
+
+This data gives information on the working population by place of residence by age group. For simplicity, we will combine the seven age groups into two. Lets assume person over 65 could be retired, whilst all other ages we can expect to working. 
+
+```{r}
+retired <- c("Aged 65-74", "Aged 75+" )
+reg_var$w_Age <- rowSums(reg_var[,!names(reg_var) %in% retired])
+reg_var$r_Age <- rowSums(reg_var[,retired])
+```
+
+### Combining the two  
+
+Athough you could join your tables on region names, geography codes where avaliable will give you a much cleaner merge.   
+```{r}
+#attach the data to the dataframe component of the Spatial data
+#Note: 0 means attach by row names
+regions_json@data <- merge(regions_json@data, reg_var, by.x= "rgn15cd", by.y=0 )
+```
+
+###[Plotting Your Maps](https://geocompr.robinlovelace.net/adv-map.html)
+
+A useful library for showing your geographic data is tmap. Robin Lovelace has a good primer on using this as you can see in the link above. Notice from the map below that we have more observations of individuals working above the age of 65 in the south and south-west.
+
+```{r}
+library(sp)
+library(tmap)
+tmap_mode("view")
+tm_shape(regions_json) + tm_polygons(col="r_Age")
+```
+
+**So far we have covered the basics of UK geographies and datasources, including how to call and wrangle your data.**
+
+
+------------------------------------------------
+
+# Spatial Autocorrelation
+
+This happens when observations that are close to eachother show some dependence - ie close observations can to some extent predict each other and show a spatial patterning. This self-correlation can be a problem because it violates the assumption of independece some methods rely one. The main two point in flagging up such a spatial dependence are: firstly, **defining who are your neighbours**; and secondly, **what your relationship to these is** (which are expressed as weights). 
+
+One common way to define neighbours is by contiguity. This means sharing a common boundary and you can generally check this by checking for at least one common boundary point. This neighbouring defintion is what I will use for the examples below. However note that neighbours can equally be defined by some more sophisticaed network measure, as well a social or physical similarity between places.
+
+
+## Moran's I
+
+### Theory
+The most common way to measure spatial autocorrelation is using Moran's I, specificially Global Moran's I. It needs two main
+$$
+I=\frac{N}{W} \frac{\sum_{i} \sum_{j} w_{i j}\left(x_{i}-\overline{x}\right)\left(x_{j}-\overline{x}\right)}{\sum_{i}\left(x_{i}-\overline{x}\right)^{2}}
+$$
+This is an index that ranges from -1 to 1 indicating whether observations are disperst or clustered. To decide if the variance of your variable in space is actually significant, Moran's I is often reported with a p-value assuming the null-hypothesis that observations are independent in space. 
+
+```{r}
+#include_graphics(".\\img\\spatialstats1\\Moran_i.png")
+```
+![Visual Aid](.\\img\\spatialstats1\\Moran_i.png)
+
+[Disperions images source.](https://www.statisticshowto.datasciencecentral.com/morans-i/)
+
+
+### Example
+
+**Defining your neighbours**
+```{r}
+library(spdep)
+neighbs<- poly2nb(regions_json, queen=TRUE)
+summary(neighbs)
+```
+
+Notice that we have links created for all nine regions. These can be access by:
+
+```{r}
+regions_json$rgn15nm[1] # region
+regions_json$rgn15nm[unlist(neighbs[[1]])] # its neighbours
+```
+**Establishing your relationship to these**
+Now that the neighbours are defined, their relation needs to be articulated. This is done withe the [style](https://www.rdocumentation.org/packages/spdep/versions/1.1-2/topics/nb2listw) param. The simplest way, which I will use here, is to assume equal weight for all neighbours:
+
+
+```{r}
+lw <- nb2listw(neighbs, style="W")
+```
+
+**Moran's Global I**
+Having defined the neighbours and their relations, we can check our index and its corresponding p-value in two ways:
+
+```{r}
+moran.test(regions_json@data$r_Age,lw)
+```
+
+```{r}
+#Permutation test for Moran's I statistic
+MC<- moran.mc(regions_json@data$r_Age, lw, nsim=599)
+MC
+```
+Note the above provides same index but different p-values. In both cases, the spatial distribution of our retired group is slightly correlated in space. Specifically this group is slightly clustered with a signifance level of p < 0.5. 
+
+The different p-values arise because the two methods make different assumptions about the null hypothesis, ie what spatially independent
+actually means. At a higher level, it has to do with what assumption we make about the variance of our variable. In the first example we are assuming that no spatial dependency means that each value is likely to occure in any polygon. We do something similar in the second example, but instead of looking at all polygons at once, we make this assumption iteratively on subsets of our data to define our distribution. Below is a plot of what the simulated distribition looks like with the line indicating the global value of $I$.
+
+```{r}
+plot(MC, main="", las=1)
+```
+
+When dealing with many polygons a simulation-based approach would make more sense. [Brunsdon & Comber go into this with more detail.](https://bookdown.org/lexcomber/brunsdoncomber2e/morans-i-an-index-of-autocorrelation.html). Thre are additional ways to visualise spatial autocorrelation, notably using variograms. [You can find a useful starting point with code examples here.](http://rstudio-pubs-static.s3.amazonaws.com/5934_41bf20e3f3a046b2871e2cd2759af01a.html))
+
+
+#Further Reading 
+
+[Useful overview from ArcGIS](https://pro.arcgis.com/en/pro-app/tool-reference/spatial-statistics/spatial-autocorrelation.htm)
+
+[Manuel Gimond's extension to local Morans' I](https://mgimond.github.io/Spatial/spatial-autocorrelation.html)
+
+[Manual for spdep](https://cran.r-project.org/web/packages/spdep/spdep.pdf)
+
+
