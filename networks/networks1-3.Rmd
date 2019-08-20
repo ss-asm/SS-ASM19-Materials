@@ -370,86 +370,572 @@ Resources from a workshop on networks and iGraph: https://kateto.net/wp-content/
 [Rmarkdown Cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)
 
 
-# Networks 2 Elsa
+# Networks 2 
+Elsa Arcaute
 
 ## Learning Objectives
 
-* Introduce two centrality measures: closeness centrality and betweeness centrality
-* Calculate these centrality measures for the karate club dataset
+* Introduce three centrality measures: degree, closeness and betweeness centrality
+* Calculate these centrality measures for a social network
+* Introduce Assortativity and modularity
 * Introduce hierarchical clustering for community detection
 * Apply hierarchical clustering to the karate club dataset
-* Produce network from OSM data
-* Calculate centrality measures on this road network
 
 ## Centrality
 
-Centrality is a measure of node importance.
+Nodes within a netork can play different roles, and have different levels of importance. Centrality measures help determine what these roles are. In this sense, there is no unique measure of importance, since this is determined with respect to a specific situation/problem at hand. For example, a person might be very important in leading a group of people, while a different one in mediating conflict and so forth. Some examples of centrality measures are:
 
-There are many different centrality measures:
+* Degree centrality
 * Eigenvector centrality
 * Katz Centrality
 * Closeness centrality
 * Betweeness centrality
 
-Here we introduce Closeness and Betweenness Centrality
+Within this section we will introduce degree, closeness and betweenness centrality.
+
+**Degree centrality**
+
+Degree was introduced in the previous section (1.3). Let us take an example of a social network, and see how it works.
+
+I asked my then 8 years old son Yaan to construct a small immediate network of people important for his dad David. How? build a list of person 1| person 2| weight, where the weight is a number between 1 and 10 relating to the importance of the relationship, 10 being the highest.
+
+```{r}
+#file constructed by Yaan
+file_network <- ".\\data\\network_David.csv"
+
+#read and get network
+dat=read.csv(file_network,header=TRUE)
+head(dat)
+g_david=graph.data.frame(dat,directed=FALSE)
+
+#let us plot it
+plot(g_david)
+
+#Plotting the network in this way does not give us enough information
+#Now let us compute the degree centrality
+deg_david=degree(g_david, v=V(g_david), loops = F, normalized = FALSE)
+
+print(deg_david)
+
+#we can plot the graph using the measure of degree
+plot(g_david,vertex.size=deg_david/max(deg_david)*14,vertex.color=deg_david,vertex.label.cex=0.5)
+title(main = "Social network of David seen by Yaan")
+
+```
+
+In this plot we can see who is the most connected person, any surprises?
+
+Now recall the previous section in which you learnt that there's 'in' and 'out' degree. Who is more important?
+
+What if instead of looking at the *number* of connections you have, you look at how important those connections are? -->  **Eigenvector centrality** 
+More elaborated algorithms looking at not only the importance of the connections, but at the connections pointing *to you*, etc, are the ones used to rank internet pages for example, such as **Page Rank**. 
 
 **Closeness centrality**
 
-Let $d_{ij}$ be the geodesic distance (shortest path) between node i and j. The mean geodesic distance of node i is given by:
+Let $d_{ij}$ be the geodesic distance (shortest path) between node $i$ and $j$. The mean geodesic distance of node $i$ to all other nodes is given by:
 $$l_{i} = \frac{1}{n}\sum_{j}d_{ij}$$
+where $n$ is the total number of nodes.
 
-The closenesscentrality of node i is defined as:
+Given that a node that is very close to most nodes, and has hence low mean geodesic, will be more influential than a node which is far away, gives rise to the following definition for the closeness centrality of node $i$:
 $$C_{i} = \frac{1}{l_{i}} = \frac{n}{\sum_{j}d_{ij}}$$
+
+
+Let us compute the closeness centrality for each node in David's network. Note that when using a software, it is important that you always read the documentation, since for example, in the case of iGraph in R, if not specified, the measure is not divided by the total n. of nodes. If normalised it will be normalised by $n-1$.
+
+The link to the documentation is here:
+https://igraph.org/r/doc/closeness.html
+
+
+```{r}
+# given that the network is weighted let us introduce the weights.
+v_weights=1/(E(g_david)$weight)
+
+# Note that we inverted the weights, since they are meant to represent distance.
+# the higher the value to closer they are
+clos_david=closeness(g_david,weights = v_weights)
+
+# the following two commands are just to choose colours for the nodes, a palette
+normalised_clos_david=(clos_david-min(clos_david))/(max(clos_david)-min(clos_david))
+palette=hsv(h=1-((normalised_clos_david*2/3)+1/3),s = 1,v=1)
+
+# Not we can plot it
+plot(g_david,vertex.color=palette,vertex.size=normalised_clos_david*15,vertex.label.cex=.5)
+title(main = "Closeness centrality of David's network according to Yaan")
+```
+
+And now who is the most important person in the network according to closeness centrality? Is this surprising?
+
+The measure computed above took into account the weights of the network. This means that the distance between two nodes that are not connected, might be shorter than the distance between two nodes that are connected but have very low "friendship" number. If this is disregarded, the measure only corresponds to the shortest path computed according to the number of links between them.  
+
+```{r}
+#topological closeness
+clos_top_david=closeness(g_david, weights = NA)
+normalised_clos_top_david=(clos_top_david-min(clos_top_david))/(max(clos_top_david)-min(clos_top_david))
+palette_top=hsv(h=1-((normalised_clos_top_david*2/3)+1/3),s = 1,v=1)
+plot(g_david,vertex.color=palette_top,vertex.size=normalised_clos_top_david*15,vertex.label.cex=.5)
+title(main = "Topological closeness centrality")
+
+```
 
 
 **Betweenness centrality**
 
+The betweenness centrality of a vertex corresponds to the number of shortest paths passing through it among all pairs. Edge betweennness is defined in a smilar, where the edge is within the shortest path.
+
 Define $n^{i}_{st}$ as:
-$$n^{i}_{st} = \begin{cases} 1, & \text{if vertex i lies on the geodesic path from s to t}\\
+$$n^{i}_{st} = \begin{cases} 1, & \text{if vertex }i\text{ lies on the geodesic path from }s\text{ to }t\\
       0, & \text{otherwise}
       \end{cases}$$
 
 Then betweenness centrality can be defined as:
 $$x_{i} = \sum_{st}n^{i}_{st}$$
 
-However, there may be multiple geodesics from s to t so to account for this we normalise by the number of geodesics from s to t, $g_{st}$:
+However, there may be multiple geodesics from $s$ to $t$ so to account for this we normalise by the number of geodesics from $s$ to $t$, $g_{st}$:
 $$x_{i} = \sum_{st}\frac{n^{i}_{st}}{g_{st}}$$
 
-## Sample data
+```{r}
+#Let us compute the betweenness centrality for the network 
+bet_david=betweenness(g_david, v=V(g_david), directed = F, normalized = FALSE, weights = (E(g_david)$weight))
+palette=hsv(h=1-((bet_david/max(bet_david)*2/3)+1/3),s = 1,v=1)
+plot(g_david,vertex.color=palette,vertex.size=bet_david/max(bet_david)*18,vertex.label.cex=.5)
+title(main = "Broker of David's network seen by Yaan")
 
-Load Karate club graph
+```
 
-Compute closeness and betweeness centralities
+This is a rather nice result: the grandma is the broker of the system!
 
-## Hierarchical clustering 
+Note that such a nice result fooled us. Why? What needs to be ammended?
 
-Steps to hierarchical clustering using centrality
+Let us look at the topological betweenness and see whether we get any insights:
 
-1. Define centrality measure
+```{r}
+#Topological betweenness centrality for the network 
+bet_david_top=betweenness(g_david, v=V(g_david), directed = F, normalized = FALSE, weights = NA)
+palette_top=hsv(h=1-((bet_david_top/max(bet_david_top)*2/3)+1/3),s = 1,v=1)
+plot(g_david,vertex.color=palette_top,vertex.size=bet_david_top/max(bet_david_top)*18,vertex.label.cex=.5)
+title(main = "Broker (topological) of David's network seen by Yaan")
 
-2. Commpute centrality measure
+```
 
-3. Iteratively remove edges based on centrality until all links are removed
+There are 2 lessons to learn from this:
 
-4. Identify set of disconnected components that maximise modularity - these are the communities
+* assigning arbitrary numbers to relationships can lead to misleading results
 
-Modularity is defined as:
-
-
-Run edge.betweeness.community community detection algorithm
+* we need to be careful when using weights: what are they encoding? how are they representing the system? how can we integrate them correctly?
 
 
-There are many other community detection algorithms, eg:
+
+## Assortativity and Modularity 
+
+In order to talk about clustering in networks, one needs to introduce a set of concepts, such as clustering coefficient, modularity, assortativity, etc., which need more than the few remaining minutes that we have. In this sense, we will give you here "a taster" of this field, since community detection is a field in its own right within networks.
+
+**Assortativity, dissassortativity **
+```{r}
+include_graphics(".\\img\\networks2\\assort.png")
+```
+
+```{r}
+include_graphics(".\\img\\networks2\\assort2.png")
+```
+
+Let us look at another example where we do not have more information on the ndoes than what you see below. 
+```{r}
+include_graphics(".\\img\\networks2\\assort_2nets_plus.png")
+```
+
+```{r}
+include_graphics(".\\img\\networks2\\assort_null.png")
+```
 
 
-## Real world example
+```{r}
+include_graphics(".\\img\\networks2\\modularity.png")
+```
 
-Code for processing road network
 
-Calculating centrality measures on road network, how to interpret these.
+```{r}
+include_graphics(".\\img\\networks2\\comm_detection.png")
+```
+
+## Hierarchical clustering
+
+There are two types of hierarchical clustering algorithm: **Agglomerative** and *Divisive*
+
+--> both methods are based on assigning a measure for each link, say a similarity measure between nodes, or a centrlaity measure for the link, and then depending on the algorithm we have: either nodes connected by high value links (e.g. high similarity) are merged, or links with low value are removed (e.g. for low similarity).
+
+The process for hierarchical clustering is as follows:
+
+1. Define a similarity measure, or a centrality measure
+
+2. Commpute the similarity or centrality measure for the network
+
+3. Iteratively merge nodes or remove links until all nodes are merged, or all links are removed
+
+4. Build a dendogram odf the process
+
+4. Identify the cut in the tree that maximises the modularity
+
+The following slides taken from Barabasi's lecture for the Girvan-Newman algorithm illustrate the method very clearly
+
+```{r}
+include_graphics(".\\img\\networks2\\G_N1.png")
+```
+
+
+```{r}
+include_graphics(".\\img\\networks2\\G_N2.png")
+```
+
+**Karate Club network**
+
+In this section we apply some of the community detection algorithms available in iGraph to Zachary's Karate club network. Look it up, this is the most famous netwrk to test community detection algorithms.
+
+```{r}
+#It's so famous it's already in iGraph
+g_karate <- make_graph("Zachary")
+#let us now produce a plot such that the nodes in the plot have a size related to their degree
+V(g_karate)$size=degree(g_karate)
+plot(g_karate,vertex.label=NA)
+title('Karate club friendship network', cex.main = 1.25,line=2)
+title('Zachary 1977', cex.main = 1, line=1)
+```
+
+**Girvan Newman method**
+M. Girvan and M. E. Newman, Proc. Natl. Acad. Sci. U.S.A., 99, 782 (2002)
+
+M. E. Newman and M. Girvan, Physical Review E 69, 026113 (2004)
+
+iGraph: edge.betweenness.community
+
+http://igraph.org/r/doc/community.edge.betweenness.html
+
+http://www.inside-r.org/packages/cran/igraph/docs/edge.betweenness.community
+
+*How does it work?*
+
+* Hierarchical divisive algorithm: remove edges (links) according to their edge betweenness values (in decreasing order).
+
+* Removal stops when modularity of the partition is maximised.
+
+--> Edges with high betweenness will most likely be the ones connecting and hence belonging to different groups.
+
+*Performance*
+
+* Good
+
+* slow: O(N3): betweenness needs to be re-calculated each time that an edge is removed
+
+**Weighted graphs?** Yes
+
+**Directed graphs?** Yes
+
+```{r}
+#------------
+#Girvan-Newman algorithm
+#------------
+	alg_name='Girvan-Newman'
+	GN_comm <- edge.betweenness.community(g_karate)
+	#look at result of algorithm
+	print(GN_comm)
+	#the process aims at maximising the modularity
+	modularity(GN_comm)
+	# number of communities and their sizes
+	nc=length(GN_comm)
+	sizes(GN_comm)
+	
+	#if you need the membership vector only
+	mem_vec=membership(GN_comm)
+	#visualise the results
+	plot(GN_comm,g_karate,layout=layout.fruchterman.reingold)
+	title(paste0(alg_name,' algorithm \n',nc,' communities for the karate club'))
+	#The division into communities is determined by the choice of location for cutting  the hierarchical tree.
+	#The threshold is selected such that the modularity is maximised
+	#Let us look at this through the dendrogram
+	dendPlot(GN_comm,use.modularity = TRUE)
+	title(paste0('Community structure dendrogram for ',alg_name,' method \n',nc,' communities for the karate club'))
+# !!!!!! This method is based on computing betweenness in an iterative way, and hence it is extremely slow for large networks. 
+
+```
+**Fast Greedy modularity optimization: Clauset, Newman and Moore**
+
+Clauset, M. E. J. Newman, and C. Moore, Phys. Rev. E 70, 066111 (2004)
+
+http://www.arxiv.org/abs/cond-mat/0408187
+
+iGraph: fastgreedy.community
+
+http://igraph.org/r/doc/fastgreedy.community.html
+
+http://www.inside-r.org/packages/cran/igraph/docs/fastgreedy.community
+
+*How does it work?*
+
+* Assign each node to its own community, no links between communities
+
+* Inspect each community pair connected by a link, and assign them to the same community if the link increases maximally the Girvan-Newman modularity.
+
+* Bottom-up instead of top-down: communities are merged iteratively such that each merge is locally optimal
+
+*Performance*
+
+* Not as good as Girvan-Newman
+
+* fast: O(NLog2N)
+
+* Resolution limit
+
+**Weighted graphs?** Yes
+
+**Directed graphs?** No
+
+```{r}
+#------------
+#Fast greedy modularity optimisation: Clauset-Newman-Moore
+#------------
+	alg_name='Clauset-Newman-Moore'
+	greedy_c <- fastgreedy.community(g_karate)
+	#look at result of algorithm
+	print(greedy_c)
+	#the process aims at maximising the modularity
+	modularity(greedy_c)
+	# number of communities and their sizes
+	nc=length(greedy_c)
+	sizes(greedy_c)
+	
+	#if you need the membership vector only
+	mem_vec=membership(greedy_c)
+	#visualise the results
+	plot(greedy_c,g_karate)#,layout=layout.fruchterman.reingold)
+	title(paste0(alg_name,' algorithm \n',nc,' communities for the karate club'))
+	#The division into communities is determined by the choice of location for cutting  the hierarchical tree.
+	#The threshold is selected such that the modularity is maximised
+	#Let us look at this through the dendrogram
+	dendPlot(greedy_c,use.modularity = TRUE)
+	title(paste0('Community structure dendrogram for ',alg_name,' method \n',nc,' communities for the karate club'))
+
+```
+**Random walk: Pons & Latapy**
+
+Pascal Pons, Matthieu Latapy: Computing communities in large networks using random walks, http://arxiv.org/abs/physics/0512106
+
+iGraph: walktrap.community
+
+*How does it work?*
+
+* This function tries to find densely connected subgraphs
+
+* short random walks tend to stay in the same community
+
+* merge separate communities in a bottom-up manner
+ * can use the modularity score to select where to cut the dendrogram
+
+*Performance*
+
+* Slower than greedy
+* More accurate than greedy
+
+
+**Weighted graphs?** Yes
+
+**Directed graphs?** No
+```{r}
+#------------
+#Community strucure via short random walks: Pons&Latapy
+#------------
+	alg_name='Random walks'
+	wtrap_c <- walktrap.community(g_karate)
+	comm=wtrap_c
+	#look at result of algorithm
+	print(comm)
+	#the process aims at maximising the modularity
+	modularity(comm)
+	# number of communities and their sizes
+	nc=length(comm)
+	sizes(comm)
+	
+	#if you need the membership vector only
+	mem_vec=membership(comm)
+	#visualise the results
+	plot(comm,g_karate)#,layout=layout.fruchterman.reingold)
+	title(paste0(alg_name,' algorithm \n',nc,' communities for the karate club'))
+	#The division into communities is determined by the choice of location for cutting  the hierarchical tree.
+	#The threshold is selected such that the modularity is maximised
+	#Let us look at this through the dendrogram
+	dendPlot(comm,use.modularity = TRUE)
+	title(paste0('Community structure dendrogram for ',alg_name,' method \n',nc,' communities for the karate club'))
+
+```
+**Leading eigenvector: Newman spectral approach**
+
+MEJ Newman: Finding community structure using the eigenvectors of matrices, Physical Review E 74 036104, (2006)
+
+iGraph: leading.eigenvector.community
+
+http://igraph.org/r/doc/leading.eigenvector.html
+
+http://www.inside-r.org/packages/cran/igraph/docs/leading.eigenvector.community
+
+*How does it work?*
+
+* Method based on the spectral properties of graphs: IF communities well identified, e-vector components for nodes in same communities will have similar values
+
+* compute eigenvector of modularity matrix for the largest positive eigenvalue.
+
+* separate vertices into two community based on the sign of the corresponding element in the eigenvector. If all elements in the eigenvector are of the same sign that means that the network has no underlying community structure.
+
+* Choose partition that maximises the G-N modularity
+
+*Performance*
+
+* Fast if select only a few e-vectors to compute, although slower than greedy
+
+* Good results
+
+**Weighted graphs?** No
+
+**Directed graphs?** No
+
+
+```{r}
+#------------
+#Leading eigenvector: Newman spectral approach
+#------------
+	alg_name='Spectral'
+	spectral_c <- leading.eigenvector.community(g_karate)
+	comm=spectral_c
+	#look at result of algorithm
+	print(comm)
+	#the process aims at maximising the modularity
+	modularity(comm)
+	# number of communities and their sizes
+	nc=length(comm)
+	sizes(comm)
+	
+	#if you need the membership vector only
+	mem_vec=membership(comm)
+	#visualise the results
+	plot(comm,g_karate)#,layout=layout.fruchterman.reingold)
+	title(paste0(alg_name,' algorithm \n',nc,' communities for the karate club'))
+	#Doesn't get a dendrogram
+
+```
+**Louvain: Blondel et al, modularity optimization**
+
+V. D. Blondel, J.-L. Guillaume, R. Lambiotte, and E. Lefebvre, J. Stat. Mech.: Theory Exp. 2008, P10008.
+
+http://arxiv.org/abs/arXiv:0803.0476
+
+iGraph:  multilevel.community
+
+http://igraph.org/r/doc/multilevel.community.html
+
+http://www.inside-r.org/packages/cran/igraph/docs/multilevel.community
+
+
+*How does it work?*
+
+* Local optimization of the G-N modularity in the neighbourhood of each node
+
+* Start from the whole network, identify a community, replace the community by a super-node --> get smaller weighted and repeat
+
+* Iterate until modularity stable
+
+*Performance*
+
+* Excellent 
+
+* Computational linear complexity w.r.t. n. nodes
+
+**Weighted graphs?** Yes
+
+**Directed graphs?** No
+
+```{r}
+#------------
+#Louvain method: Blondel et al, modularity optimization
+#------------
+	alg_name='Louvain'
+	louv_c <- multilevel.community(g_karate)
+	comm=louv_c
+	#look at result of algorithm
+	print(comm)
+	#the process aims at maximising the modularity
+	modularity(comm)
+	# number of communities and their sizes
+	nc=length(comm)
+	sizes(comm)
+	
+	#if you need the membership vector only
+	mem_vec=membership(comm)
+	#visualise the results
+	plot(comm,g_karate)#,layout=layout.fruchterman.reingold)
+	title(paste0(alg_name,' algorithm \n',nc,' communities for the karate club'))
+
+```
+**Infomap: Rosvall & Bergstrom**
+
+M. Rosvall and C. T. Bergstrom, Maps of information flow reveal community structure in complex networks, PNAS 105, 1118 (2008) 
+
+M. Rosvall, D. Axelsson, and C. T. Bergstrom, The map equation, Eur. Phys. J. Special Topics 178, 13 (2009). 
+
+iGraph: infomap.community
+
+http://igraph.org/r/doc/infomap.html
+
+http://www.inside-r.org/packages/cran/igraph/docs/infomap.community
+
+*How does it work?*
+
+Find community structure that minimizes the expected description length of a random walker trajectory
+
+*Performance*
+
+* Fast
+* Excellent, best performance
+
+**Weighted graphs?** Yes
+
+**Directed graphs?** Yes
+
+```{r}
+#------------
+#Infomap method: Rosvall and Bergstrom
+#------------
+	alg_name='Infomap'
+	info_c <- infomap.community(g_karate)
+	comm=info_c
+	#look at result of algorithm
+	print(comm)
+	#the process aims at maximising the modularity
+	modularity(comm)
+	# number of communities and their sizes
+	nc=length(comm)
+	sizes(comm)
+	
+	#if you need the membership vector only
+	mem_vec=membership(comm)
+	#visualise the results
+	plot(comm,g_karate)#,layout=layout.fruchterman.reingold)
+	title(paste0(alg_name,' algorithm \n',nc,' communities for the karate club'))
+
+```
+
+```{r}
+include_graphics(".\\img\\networks2\\table_mod.png")
+```
+
+```{r}
+include_graphics(".\\img\\networks2\\Expert.png")
+```
+
+```{r}
+include_graphics(".\\img\\networks2\\Expert2.png")
+```
 
 
 # Networks 3 Neave
+
+
 
 ```{r echo=FALSE}
 include_graphics(".\\img\\UCL-Economic-Complexity-Intro.png")
@@ -459,13 +945,14 @@ include_graphics(".\\img\\UCL-Economic-Complexity-Intro.png")
 
 ## Learning Objectives
 
-What are the three main take aways from this session?
+This session will cover the following:
 
-* Understand how trade data can be used to model the capabilities of countries
-* Calculate Relative Compatative Advantage (RCA) for a country and product
-* Understand Product Space and how to use RCA to compute the proximity between products
+* How trade data can be used to model the capabilities of countries
+* Calculating Relative Compatative Advantage (RCA) for a country and product
+* Introduce The Product Space and using RCA to compute the proximity between products
+* Identifying products a country has the capacity to succeed at exporting
 
-The analysis presented here follows the paper *The Product Space Conditions the Development of Nations* By C. A. Hidalgo, B. Klinger, A.-L. Barabási, R. Hausmann, Science Jul 2007
+The code presented here follows the methods used in *The Product Space Conditions the Development of Nations* By C. A. Hidalgo, B. Klinger, A.-L. Barabási, R. Hausmann, Science Jul 2007
 
 It's a great paper and worth a read.
 
@@ -503,21 +990,20 @@ include_graphics(".\\img\\UCL-Trade-Data.png")
 
 ## Trade Data
 
-Access world import and export data from the United Nations here: https://cid.econ.ucdavis.edu/nberus.html.
+You can access world import and export data from the United Nations here: https://cid.econ.ucdavis.edu/nberus.html.
 
 See page 48 of the documentation (.\\data\\wtf99\\NBER-UN_Data_Documentation_w11040.pdf) for an explanation of the variables.
 
 ```{r}
-# Load world import and export data from 1999
-wtf_data <- ".\\data\\wtf99\\wtf99.dta"
-dfWorldTrade <- read.dta13(wtf_data)
+# Load world import and export data from 1999. We restrict our analysis to a single year for ease but it is better to use all available years.
+dfWorldTrade <- read.dta13(".\\data\\wtf99\\wtf99.dta")
 head(dfWorldTrade)
 ```
 
 Products are differentiated by their sitc4 code
 
 ```{r}
-# 1263 different product codes includes 1 blank code so 1262 in reality
+# 1263 different product codes includes 1 blank code so 1262 in practice
 length(unique(dfWorldTrade$sitc4))
 ```
 ```{r}
@@ -525,10 +1011,14 @@ length(unique(dfWorldTrade$sitc4))
 length(unique(dfWorldTrade$ecode))
 ```
 
-Some data cleaning steps here
+Data cleaning
 ```{r}
 # Remove invalid product codes and select only the columns we are interested in
 dfWorldTrade <- dfWorldTrade[dfWorldTrade$sitc4 !="",c("ecode","sitc4","value")]
+
+# Remove entries where the exporter is 'World'. The World category is assigned to imports/exports with missing data.
+dfWorldTrade <- dfWorldTrade[dfWorldTrade$ecode != "100000",]
+
 head(dfWorldTrade)
 ```
 
@@ -617,6 +1107,7 @@ $$P(product_{i} | product_{j}) = \frac{\text{number of countries exporting i and
 # Number of counties exporting each product
 dfRCA$is_exported <- as.numeric(dfRCA$rca > 1)
 dfNExport <- aggregate(dfRCA$is_exported, by = list(dfRCA$sitc4), sum)
+colnames(dfNExport)[2] <- "nexporters"
 head(dfNExport)
 ```
 
@@ -625,9 +1116,11 @@ head(dfNExport)
 # Number of countries exporting product paris
 # This block takes a long time to run. To save time (and avoid crashing your computer), you can read the data from csv using the next block instead.
 
+# Merge on country code to match exports to one another if they are both exported by the same country, then count the number of countries than export both products
 #dfPairs <- merge(dfRCA, dfRCA, by = "ecode")
 #dfPairs$joint_export <-  as.numeric((dfPairs$is_exported.x == 1) & (dfPairs$is_exported.y ==1))
 #dfNJointExport <- aggregate(dfPairs$joint_export, by = list(dfPairs$sitc4.x,dfPairs$sitc4.y), sum)
+#colnames(dfNJointExport)[3] <- "njointexporters"
 #write.csv(dfNJointExport, ".\\data\\product_joint_export_counts.csv", row.names=FALSE)
 #head(dfNJointExport)
 ```
@@ -638,10 +1131,10 @@ head(dfNJointExport)
 ```
 
 
-Use these two tables to computer the conditional probabilities
+Use these two tables to compute the conditional probabilities
 ```{r}
 dfConditional <- merge(dfNJointExport, dfNExport, by = 'Group.1')
-dfConditional$pij <- dfConditional$x.x / dfConditional$x.y
+dfConditional$pij <- dfConditional$njointexporters / dfConditional$nexporters
 head(dfConditional)
 ```
 
@@ -688,17 +1181,7 @@ Create an iGraph object from this edge list
 graphProdSpace <- graph_from_data_frame(dfProximity, directed = FALSE)
 ```
 
-This is a very dense graph so plotting the whole thing will not be helpful. Instead lets look at teh Minimum Spanning Tree
-```{r}
-# Find the minimum spanning tree of this graph (really want maximum so would need to invert weights)
-graphMST <- minimum.spanning.tree(graphProdSpace, weights = get.edge.attribute(graphProdSpace)$proximity)
-```
-
-Even this is not particularly helpful
-```{r}
-plot(graphMST, vertex.size=3,vertex.color="red",vertex.label.cex=.1, )
-```
-
+This is a very dense graph so plotting the whole thing will not be helpful. In the Hidalgo (2007) paper the authors describe the variety of methods they used to represent the network visually and produce a figure like that in the slide below. See the supporting online material for details: https://science.sciencemag.org/content/sci/suppl/2007/07/26/317.5837.482.DC1/Hidalgo.SOM.pdf
 
 ***
 
@@ -739,32 +1222,11 @@ ukExports <- dfRCA[(dfRCA$is_exported == 1) & (dfRCA$ecode == "538260"),"sitc4"]
 dfProximityUK <- dfProximity[dfProximity$product2 %in% ukExports,]
 
 # Now aggregate by product to get the weight contribution from UK exported products only
-dfStrengthUK <- aggregate(dfProximity$proximity, by = list(dfProximity$product1), sum)
+dfStrengthUK <- aggregate(dfProximityUK$proximity, by = list(dfProximityUK$product1), sum)
 colnames(dfStrengthUK) <- c("product","strengthUK")
 head(dfStrengthUK)
 ```
 
-```{r}
-head(ukExports)
-```
-```{r}
-length(ukExports)
-```
-
-
-```{r}
-length(unique(dfProximity$product1))
-```
-```{r}
-length(unique(dfProximity$product2))
-```
-```{r}
-length(unique(dfProximityUK$product2))
-```
-
-```{r}
-length(unique(dfStrengthUK$product))
-```
 
 ```{r}
 # The denominator of the density of a node is given by the sum of its edge weights. This is similar to the node degree but instead we use the edge function
@@ -783,7 +1245,40 @@ dfStrength$density <- dfStrength$strengthUK / dfStrength$strength
 
 # Now select just the products that the UK doesn't export and rank by strength
 dfUKNotExp <- dfStrength[!(dfStrength$product %in% ukExports),]
-head(dfUKNotExp[with(dfUKNotExp, order(density)),])
+head(dfUKNotExp[with(dfUKNotExp, order(density, decreasing = TRUE)),])
+```
+
+
+What products are these?
+```{r}
+# The descriptions for revision 1 and 2 of the SITC codes can be downloaded from here: https://unstats.un.org/unsd/tradekb/Knowledgebase/50262/Commodity-Indexes-for-the-Standard-International-Trade-Classification-Revision-3
+
+# The codes used here are the 4th revision but we will use the descriptions from the 2nd revision for ease.
+
+# The 4th revision is detailed here: https://unstats.un.org/unsd/publications/catalogue?selectID=104
+dfSITC <- read.csv(".\\data\\SITC Rev2.csv")
+head(dfSITC)
+```
+
+```{r}
+# Add product descriptions into the stength dataframe
+dfStrength$product_group <- substr(dfStrength$product, start = 1, stop = 2)
+dfStrength <- merge(dfStrength, dfSITC, by.x = c("product"), by.y = c("ï..Commodity.Code"))
+dfStrength <- merge(dfStrength, dfSITC, by.x = c("product_group"), by.y = c("ï..Commodity.Code"))
+colnames(dfStrength)[6:7] <- c("product_description","group_description")
+head(dfStrength)
+```
+
+```{r}
+# Now select just the products that the UK doesn't export and rank by strength
+dfUKNotExp <- dfStrength[!(dfStrength$product %in% ukExports),]
+head(dfUKNotExp[with(dfUKNotExp, order(density, decreasing = TRUE)),])
+```
+
+```{r}
+# What product *does* the UK import that have the highest density
+dfUKExp <- dfStrength[dfStrength$product %in% ukExports,]
+head(dfUKExp[with(dfUKExp, order(density, decreasing = TRUE)),])
 ```
 
 
@@ -792,5 +1287,3 @@ head(dfUKNotExp[with(dfUKNotExp, order(density)),])
 ```{r echo=FALSE}
 include_graphics(".\\img\\UCL-Prediction-using-Density.png")
 ```
-
-
