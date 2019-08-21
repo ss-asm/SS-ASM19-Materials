@@ -13,6 +13,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+#install.packages("foreign")
 library(igraph)
 library(lattice)
 library(Matrix)
@@ -24,11 +25,12 @@ library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Networks 1 Obi
+# Networks 1
+Obi Thompson Sargoni
 
 ## Learning Objectives
 
-What are the three main take aways from today?
+What are the main take aways from this session?
 
 * Defining graphs: nodes, edges and the adjacency matrix.
 * Directed vs undirected graphs
@@ -37,10 +39,9 @@ What are the three main take aways from today?
 * Shortest paths and diameter
 * Performing the above calculations on the London Tube network
 
-Possible useful resource: https://kateto.net/wp-content/uploads/2016/01/NetSciX_2016_Workshop.pdf
+***
 
-
-## Sample data
+## Simple Example
 
 "A network is, in its simlpest form, a collection of points joined together in pairs by lines"
 M.E.J Newman, Networks, An Introduction
@@ -52,6 +53,7 @@ There are many systems that can be usefully thought of as networks. For example:
 * Transport networks (intersections joined by roads or stations joined by trains)
 * Economic networks (businesses joined by transactions)
 
+***
 
 Consider hypothetical Twitter data. Each column representing who that person follows.
 
@@ -67,7 +69,7 @@ dfTwitter <- data.frame("Bonnie" = c(0,0,0,1,1),
 dfTwitter
 ```
 
-From this we see that Bonnie follows Neave and Obi, Matt follow Bonnie and Neave, etc...
+***
 
 Now create an iGraph graph object from this data
 ```{r}
@@ -76,7 +78,7 @@ plot(graphTwitter)
 
 ```
 
-Some important definitions to introduce here are:
+***
 
 **Graph**
 
@@ -92,15 +94,18 @@ Edges
 E(graphTwitter)
 ```
 
+Edge List
+
 An equivalent representation of this network is the edge list, with edges pointing from the nodes in columns 1 to the nodes in column 2.
 ```{r}
 get.edgelist(graphTwitter)
 ```
 
+***
 
 **Adjacency matrix**
 
-Another equivalent, and frequently used representation of a network is the adjacency matrix.
+Another important representation of a network is the adjacency matrix.
 
 In iGraph the convention for adjacency matrix elements is (some textbooks use the reverse convention)
 
@@ -119,24 +124,32 @@ $A_{Bonnie,Matt} = 1$
 graphTwitter['Bonnie','Matt'] # as.matrix(get.adjacency(graphTwitter))['Bonnie','Matt'] also works 
 ```
 
+***
 
 **Directed Graph**
 
-This is a directed graph meaning that node j might be connected to node i, but node i might not be connected to node j.
+A directed graph is a graph where an edge points from one node to another.
 
-Directed graphs have adjacency matrices that are not symmetric
+Directed graphs have asymmetric adjacency matrices.
 ```{r}
 isSymmetric(get.adjacency(graphTwitter))
 ```
 
 Bonnie is connected to Matt but Matt is not connected to Bonnie
+$A_{Bonnie,Matt} \neq A_{Matt, Bonnie}$
 ```{r}
 print(graphTwitter['Bonnie','Matt'])
 print(graphTwitter['Matt','Bonnie'])
 ```
 
+```{r}
+plot(graphTwitter)
+```
 
-## Sample analysis
+
+***
+
+## Simple Analysis
 
 With the information about our social network represented as a Graph, we can perform some analysis.
 
@@ -147,11 +160,16 @@ $k_i = \sum_{i=1}^{n}A_{ij} = \sum_{j=1}^{n}A_{ij}$
 
 Directed graph: either the number of 'in' links or 'out' links attached to a node.
 
+Recall:
+$$A_{ij} = \begin{cases} 1, & \text{if there is an edge from node i to j}\\
+      0, & \text{otherwise}
+      \end{cases}$$
+
 In degree: number of links pointing to you
-$k_{i}^{in} = \sum_{j=1}^{n}A_{ij}$
+$k_{j}^{in} = \sum_{i=1}^{n}A_{ij}$
 
 Out degree: number of links you point to
-$k_{j}^{in} = \sum_{i=1}^{n}A_{ij}$
+$k_{i}^{out} = \sum_{j=1}^{n}A_{ij}$
 
 In degree of the Twitter Graph
 ```{r}
@@ -163,6 +181,7 @@ Out degree
 degree(graphTwitter, mode = "out")
 ```
 
+***
 
 **Paths**
 
@@ -184,10 +203,28 @@ shortest_paths(graphTwitter, 'Bonnie', to = 'Elsa',
                predecessors = FALSE, inbound.edges = FALSE)
 ```
 
+***
 
 **Connected**
 
-A Graph is connected if it is possible to reach any node from any other node. Directed graphs can be 'strongly' or 'weakly' connected. 
+A Graph is connected if it is possible to reach any node from any other node. Directed graphs can be 'strongly' or 'weakly' connected.
+
+```{r}
+dfDisconnected <- data.frame("Bonnie" = c(0,1,0,0,0), 
+                        "Matt" = c(1,0,0,0,0),
+                        "Elsa" = c(0,0,0,1,1),
+                        "Neave" = c(0,0,0,0,1),
+                        "Obi" = c(0,0,1,0,0),
+                        row.names = c("Bonnie", "Matt", "Elsa", "Neave", "Obi"))
+
+graphDisconnected <- graph_from_adjacency_matrix(as.matrix(dfDisconnected))
+plot(graphDisconnected)
+```
+
+```{r}
+is.connected(graphDisconnected)
+```
+
 
 * Strongly connected: it is possible to reach every node from every other node whilst following the directions of the edges
 * Weakly connected: it is possible to reach every node only if the directions of the edges are disregarded (treat as undirected graph)
@@ -198,18 +235,21 @@ The Twitter graph is strongly connected (which means it is also weakly connected
 is.connected(graphTwitter, mode = "strong")
 ```
 
+***
+
 **Diameter**
 
-The diameter of the network is the length of the longest shortest path.
+The diameter of the network is the length of the longest shortest path between nodes for which a path exists. For an disconnected graph the largest connected component diameter is given.
+
+This avoids infinite diameters
 ```{r}
-diameter(graphTwitter)
+diameter(graphTwitter, directed = TRUE, unconnected = TRUE, weights = NULL)
 ```
 
 
-For only weakly connected directed graphs the diameter is infinite (since it is not possible to connect some node pairs) and so a slightly different definition of diameter must be used.
+***
 
-
-## Real World Example
+## Tube Network Example
 
 Use GIS data of the London Underground to produce graph representing the tube network.
 
@@ -234,6 +274,7 @@ and attributes of the linestrings
 head(sfTube@data)
 ```
 
+***
 
 **Create a graph from the data**
 
@@ -269,11 +310,11 @@ secondStation <- dfMergedTube[dfMergedTube$order == 2,]
 firstStation <- data.frame(id=firstStation$station_1, name = firstStation$station_1_, lat = firstStation$lat, long = firstStation$long)
 secondStation <- data.frame(id=secondStation$station_2, name = secondStation$station_2_, lat = secondStation$lat, long = secondStation$long)
 
+# Combine stations, dropping duplicates
 dfStations <- rbind(firstStation, secondStation) %>% unique()
 head(dfStations)
 
 ```
-
 
 Find the index at which each vertex appears in the dataframe of stations and use this to assign names and positions to the verticies
 ```{r}
@@ -297,8 +338,9 @@ print(get.vertex.attribute(graphTube, "x", 11))
 print(get.vertex.attribute(graphTube, "y", 11))
 ```
 
+***
 
-## Numeric Results
+## Tube Network Analysis
 
 
 This graph is undirected and connected.
@@ -330,11 +372,12 @@ From this we see there are two connections between station 87 and 49. Check this
 dfTube[dfTube$station_1 == 49,]
 ```
 
+***
 
 **Degree distribution**
 
 Calculate degree distribution of the tube network
-```{r Numeric_Result, echo=FALSE}
+```{r}
 hist(degree(graphTube))
 ```
 
@@ -362,13 +405,15 @@ graphTube=simplify(graphTube,remove.loops = T,remove.multiple = T,edge.attr.comb
 plot(graphTube,vertex.size=3,vertex.color="red",vertex.label.cex=.1)
 ```
 
+***
 
 ## Further Reading
 
 Resources from a workshop on networks and iGraph: https://kateto.net/wp-content/uploads/2016/01/NetSciX_2016_Workshop.pdf
 
-[Rmarkdown Cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)
+M.E.J Newman, Networks, An Introductions
 
+***
 
 # Networks 2 
 Elsa Arcaute
@@ -381,6 +426,7 @@ Elsa Arcaute
 * Introduce hierarchical clustering for community detection
 * Apply hierarchical clustering to the karate club dataset
 
+
 ## Centrality
 
 Nodes within a netork can play different roles, and have different levels of importance. Centrality measures help determine what these roles are. In this sense, there is no unique measure of importance, since this is determined with respect to a specific situation/problem at hand. For example, a person might be very important in leading a group of people, while a different one in mediating conflict and so forth. Some examples of centrality measures are:
@@ -392,6 +438,8 @@ Nodes within a netork can play different roles, and have different levels of imp
 * Betweeness centrality
 
 Within this section we will introduce degree, closeness and betweenness centrality.
+
+***
 
 **Degree centrality**
 
@@ -428,7 +476,8 @@ In this plot we can see who is the most connected person, any surprises?
 Now recall the previous section in which you learnt that there's 'in' and 'out' degree. Who is more important?
 
 What if instead of looking at the *number* of connections you have, you look at how important those connections are? -->  **Eigenvector centrality** 
-More elaborated algorithms looking at not only the importance of the connections, but at the connections pointing *to you*, etc, are the ones used to rank internet pages for example, such as **Page Rank**. 
+More elaborated algorithms looking at not only the importance of the connections, but at the connections pointing *to you*, etc, are the ones used to rank internet pages for example, such as **Page Rank**.
+
 
 **Closeness centrality**
 
@@ -524,7 +573,6 @@ There are 2 lessons to learn from this:
 * we need to be careful when using weights: what are they encoding? how are they representing the system? how can we integrate them correctly?
 
 
-
 ## Assortativity and Modularity 
 
 In order to talk about clustering in networks, one needs to introduce a set of concepts, such as clustering coefficient, modularity, assortativity, etc., which need more than the few remaining minutes that we have. In this sense, we will give you here "a taster" of this field, since community detection is a field in its own right within networks.
@@ -534,14 +582,17 @@ In order to talk about clustering in networks, one needs to introduce a set of c
 include_graphics(".\\img\\networks2\\assort.png")
 ```
 
+
 ```{r}
 include_graphics(".\\img\\networks2\\assort2.png")
 ```
+
 
 Let us look at another example where we do not have more information on the ndoes than what you see below. 
 ```{r}
 include_graphics(".\\img\\networks2\\assort_2nets_plus.png")
 ```
+
 
 ```{r}
 include_graphics(".\\img\\networks2\\assort_null.png")
@@ -553,9 +604,12 @@ include_graphics(".\\img\\networks2\\modularity.png")
 ```
 
 
+
 ```{r}
 include_graphics(".\\img\\networks2\\comm_detection.png")
 ```
+
+
 
 ## Hierarchical clustering
 
@@ -575,6 +629,8 @@ The process for hierarchical clustering is as follows:
 
 4. Identify the cut in the tree that maximises the modularity
 
+
+
 The following slides taken from Barabasi's lecture for the Girvan-Newman algorithm illustrate the method very clearly
 
 ```{r}
@@ -582,9 +638,12 @@ include_graphics(".\\img\\networks2\\G_N1.png")
 ```
 
 
+
 ```{r}
 include_graphics(".\\img\\networks2\\G_N2.png")
 ```
+
+
 
 **Karate Club network**
 
@@ -599,6 +658,8 @@ plot(g_karate,vertex.label=NA)
 title('Karate club friendship network', cex.main = 1.25,line=2)
 title('Zachary 1977', cex.main = 1, line=1)
 ```
+
+
 
 **Girvan Newman method**
 M. Girvan and M. E. Newman, Proc. Natl. Acad. Sci. U.S.A., 99, 782 (2002)
@@ -941,7 +1002,6 @@ include_graphics(".\\img\\networks2\\Expert2.png")
 include_graphics(".\\img\\UCL-Economic-Complexity-Intro.png")
 ```
 
-***
 
 ## Learning Objectives
 
@@ -1257,14 +1317,15 @@ What products are these?
 
 # The 4th revision is detailed here: https://unstats.un.org/unsd/publications/catalogue?selectID=104
 dfSITC <- read.csv(".\\data\\SITC Rev2.csv")
+colnames(dfSITC) <- c("commodity.code", "commodity.description")
 head(dfSITC)
 ```
 
 ```{r}
 # Add product descriptions into the stength dataframe
 dfStrength$product_group <- substr(dfStrength$product, start = 1, stop = 2)
-dfStrength <- merge(dfStrength, dfSITC, by.x = c("product"), by.y = c("ï..Commodity.Code"))
-dfStrength <- merge(dfStrength, dfSITC, by.x = c("product_group"), by.y = c("ï..Commodity.Code"))
+dfStrength <- merge(dfStrength, dfSITC, by.x = c("product"), by.y = c("commodity.code"))
+dfStrength <- merge(dfStrength, dfSITC, by.x = c("product_group"), by.y = c("commodity.code"))
 colnames(dfStrength)[6:7] <- c("product_description","group_description")
 head(dfStrength)
 ```
