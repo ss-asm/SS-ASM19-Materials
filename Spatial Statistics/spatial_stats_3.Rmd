@@ -81,7 +81,6 @@ knitr::include_graphics(".\\img\\spatialstats3\\fig.png")
 There is a very comprehensive set of manuals/guides/tutorials for *spatstat* that can easily be found using your favourite search engine.
 
 ```{r spatstat, message=FALSE}
-
 #NOT RUN
 #If you don't have the libraries then you will need to install them first
 #install.packages("spatstat")

@@ -1,0 +1,375 @@
+---
+title: "Spatial Statistics 1 - Notes"
+author: "Boyana Buyuklieva"
+date: "August 21, 2019"
+output: html_document
+fontsize: 20pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# UK administrative Geographies
+
+The UK consists of four countries: England, Scotland, Wales and Norther Ireland (in order of population size). Great Britain refers to the island that has the first three countries. Administrative data for the UK often follows country divides, although England and Wales are accounted for together for many things by the Office of National Statistics. Administrative geographies are one of 8 overarching types of statistical geographies, as seen below:
+
+![](./Hierarchical_representaiton_UK_Stat_Geos.jpg)
+
+Broadly, administrative geographies are most general purpose for the UK as this is the level at which policy is made. Also, the units of the Statistical Building Blocks constrained are by these. For example, middle-level output areas (MSOAs) and the smaller geographies below all aggregate to Local Authority Districts. Administrative geographies come in several levels of detail:
+
+![](./Admin_Geos.jpg)
+
+Worth noting about the Statistical Building Blocks is that they are derived from populations counts, not areas. Below is an overview of the thresholds used to create these geographies.
+
+
+![](./Admin_Geos_oas.jpg)
+
+[More about these population-weighted geographies here](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/bulletins/2011censuspopulationandhouseholdestimatesforsmallareasinenglandandwales/2012-11-23)
+
+## Getting Data 
+
+### Polygons
+You can get geographic data for the UK from the [open geography portal](http://geoportal.statistics.gov.uk/datasets/regions-december-2018-en-bfe) via an API call. This is convenient because it means you don't have to store large files on your machine and can share your work easier. For simplicity we will use regions for example below. There are nine regions in England.  
+
+```{r message=FALSE, warning=FALSE}
+library(raster)
+library(knitr)
+library(geojsonio)
+
+library(sp)
+library(tmap)
+
+library(spdep)
+
+library(reshape2)
+
+library(rsq)
+```
+
+
+
+```{r  read_region, cache=TRUE}
+#connect to the open geography portal API
+regions_json <- geojson_read("https://opendata.arcgis.com/datasets/8d3a9e6e7bd445e2bdcc26cdf007eac7_1.geojson", what = "sp")
+z_regions_json <- regions_json
+plot(regions_json )
+```
+
+### Variables
+
+I'm using table WU02EW - Location of usual residence and place of work by age. This data is available down to MSOA, but we will be using it at regional level for England.  
+
+```{r get_data, cache=TRUE}
+#Connect to the NOMIS API to get Data
+#Note: I'm only using England here for convience.
+t_wu02Ew  <- read.csv(file = "https://www.nomisweb.co.uk/api/v01/dataset/NM_1206_1.data.csv?date=latest&usual_residence=2013265921...2013265930&place_of_work=2013265921...2013265930&age=0...6&measures=20100", header=TRUE)
+kable(head(t_wu02Ew))
+```
+
+This dataset is currently a flat 2D table despite containing multi-way tabulated counts:  by **region**,**origin**,**destination** and **age group**. To wrangle this into counts by geographic unit to use with the polygon data, we apply the following transformation:
+
+```{r}
+#names(t_wu02Ew )#Select only columns we need for now
+ac <- c("USUAL_RESIDENCE_CODE","AGE_NAME","OBS_VALUE")
+t_wu02Ew_ac <-t_wu02Ew[,ac]
+
+reg_var <- xtabs(OBS_VALUE ~ USUAL_RESIDENCE_CODE + AGE_NAME, data=t_wu02Ew_ac)
+reg_var <- as.data.frame.matrix(reg_var) 
+kable(reg_var)
+```
+
+This data gives information on the working population by place of residence by age group. For simplicity, we will combine the seven age groups into two. Let's assume person over 65 could be retired, whilst all other ages we can expect to working to generate two variables: 
+
+```{r}
+retired <- c("Aged 65-74", "Aged 75+" )
+reg_var$w_Age <- rowSums(reg_var[,!names(reg_var) %in% retired])
+reg_var$r_Age <- rowSums(reg_var[,retired])
+```
+
+### Combining the two  
+
+Although you could join your tables on region names, geography codes where available will give you a much cleaner merge.  
+```{r}
+#attach the data to the dataframe component of the Spatial data
+#Note: 0 means attach by row names
+regions_json@data <- merge(regions_json@data, reg_var, by.x= "rgn15cd", by.y=0 )
+```
+
+###[Plotting Your Maps](https://geocompr.robinlovelace.net/adv-map.html)
+
+A useful library for showing your geographic data is *tmap*. Dr. Robin Lovelace has a good primer on using this as you can see in the link above. Notice from the map below that we have more observations of individuals working above the age of 65 in the south and south-west.
+
+```{r}
+tmap_mode("view")
+tm_shape(regions_json) + tm_polygons(col="r_Age")
+```
+
+**So far we have covered the basics of UK geographies and data sources, including how to call and wrangle your data.**
+
+
+------------------------------------------------
+
+# Spatial Autocorrelation
+
+This happens when observations that are close to each other show some dependence - i.e. close observations can to some extent predict each other and show a spatial patterning. This self-correlation can be a problem because it violates the assumption of independence some methods rely one. The main two point in flagging up such a spatial dependence are: firstly, **defining who are your neighbours**; and secondly, **what your relationship to these is** (which are expressed as weights). 
+
+One common way to define neighbours is by contiguity. This means sharing a common boundary and you can generally check this by checking for at least one common boundary point. This neighbouring definition is what I will use for the examples below. However note that neighbours can equally be defined by some more sophisticated network measure, as well a social or physical similarity between places.  
+
+## Moran's I
+
+### Theory
+The most common way to measure spatial autocorrelation is using Moran's I, specificially Global Moran's I.  
+$$
+I=\frac{N}{W} \frac{\sum_{i} \sum_{j} w_{i j}\left(x_{i}-\overline{x}\right)\left(x_{j}-\overline{x}\right)}{\sum_{i}\left(x_{i}-\overline{x}\right)^{2}}
+$$
+where ${\displaystyle N}$ is the number of spatial units indexed by ${\displaystyle i}$ i and ${\displaystyle j}$ j    
+${\displaystyle x}$ is the variable of interest    
+${\displaystyle {\bar {x}}}$ is the mean of ${\displaystyle x}$    
+${\displaystyle w_{ij}}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., ${\displaystyle w_{ii}=0}$ ${\displaystyle w_{ii}=0}$)   
+${\displaystyle W}$ is the sum of all ${\displaystyle w_{ij}}$ $w_{ij}$   
+
+
+This is an index that ranges from -1 to 1 indicating whether observations are disperse or clustered. To decide if the variance of your variable in space is actually significant, Moran's I is often reported with a p-value assuming the null-hypothesis that observations are independent in space. 
+
+
+![](./Moran_i.png)
+
+[Disperions images source.](https://www.statisticshowto.datasciencecentral.com/morans-i/)
+
+
+### Example
+
+**Defining your neighbours**  
+```{r}
+#queen=T; neighbour can share only point
+neighbs<- poly2nb(regions_json, queen=TRUE)
+summary(neighbs)
+```
+
+Notice that we have links created for all nine regions. These can be access by:
+
+```{r}
+regions_json$rgn15nm[1] # region
+regions_json$rgn15nm[unlist(neighbs[[1]])] # its neighbours
+```
+**Establishing your relationship to these**  
+Now that the neighbours are defined, their relation needs to be articulated. This is done with the [style](https://www.rdocumentation.org/packages/spdep/versions/1.1-2/topics/nb2listw) param. The simplest way, which I will use here, is to assume equal weight for all neighbours:
+
+
+```{r}
+lw <- nb2listw(neighbs, style="W")
+```
+
+**Moran's Global I**  
+Having defined the neighbours and their relations, we can check our index and its corresponding p-value in two ways:  
+
+```{r}
+moran.test(regions_json@data$r_Age,lw)
+```
+
+```{r}
+#Permutation test for Moran's I statistic
+MC<- moran.mc(regions_json@data$r_Age, lw, nsim=599)
+MC
+```
+Note the above provides same index but different p-values. In both cases, the spatial distribution of our retired group is slightly correlated in space. Specifically this group is slightly clustered with a significance level of p > 0.05.  
+
+The different p-values arise because the two methods make different assumptions about the null hypothesis, i.e. what spatially independent
+actually means. At a higher level, it has to do with what assumption we make about the variance of our variable. In the first example we are assuming that no spatial dependency means that each value is likely to occur in any polygon. We do something similar in the second example, but instead of looking at all polygons at once, we make this assumption iteratively on subsets of our data to define our distribution. Below is a plot of what the simulated distribution looks like with the line indicating the global value of $I$.    
+
+```{r}
+plot(MC, main="", las=1)
+```
+
+When dealing with many polygons a simulation-based approach would make more sense. [Brunsdon & Comber go into this with more detail.](https://bookdown.org/lexcomber/brunsdoncomber2e/morans-i-an-index-of-autocorrelation.html). There are additional ways to visualise spatial autocorrelation, notably using variograms. [You can find a useful starting point with code examples here.](http://rstudio-pubs-static.s3.amazonaws.com/5934_41bf20e3f3a046b2871e2cd2759af01a.html))
+
+
+####Further Reading on Moran's I
+[Useful overview from ArcGIS](https://pro.arcgis.com/en/pro-app/tool-reference/spatial-statistics/spatial-autocorrelation.htm)
+[Manuel Gimond's extension to local Morans' I](https://mgimond.github.io/Spatial/spatial-autocorrelation.html)
+[Manual for spdep](https://cran.r-project.org/web/packages/spdep/spdep.pdf)
+
+
+## Geary's C  
+A less popular alternative to Moran's I is Geary's C, also known as Geary's contiguity ratio or simply Geary's ratio. It ranges from 0 to 2. Inversely to $I$, lower values $G$ indicate clustering and higher values indicate dispersal. I looks very similar to $I$:   
+
+$$
+C=\frac{(N-1) \sum_{i} \sum_{j} w_{i j}\left(x_{i}-x_{j}\right)^{2}}{2 W \sum_{i}\left(x_{i}-\overline{x}\right)^{2}}
+$$
+
+where ${\displaystyle N}$ is the number of spatial units indexed by ${\displaystyle i}$ i and ${\displaystyle j}$ j    
+${\displaystyle x}$ is the variable of interest    
+${\displaystyle {\bar {x}}}$ is the mean of ${\displaystyle x}$    
+${\displaystyle w_{ij}}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., ${\displaystyle w_{ii}=0}$ ${\displaystyle w_{ii}=0}$)   
+${\displaystyle W}$ is the sum of all ${\displaystyle w_{ij}}$ $w_{ij}$   
+
+In the case of Moran's $I$, the numerator considers the value per polygon for each neighbour relative to the mean ${\displaystyle {\bar {x}}}$. By contrast, in Geary's $C$, we consider the relationship between spatial units directly with $\left(x_{i}-x_{j}\right)^{2}$, penalising large difference by squaring the whole expression. As we are working with two units at a time, how we normalise also changes: we do this using ${\displaystyle N}$ - 1 units and double the sum of all weights. As $C$ relies less on the mean of all observations *which shifts drastically with extreme outliers*, it provides a more nuanced perspective on local variations. 
+
+```{r}
+geary.test(regions_json@data$r_Age,lw)
+```
+
+```{r}
+#Permutation test for Moran's I statistic
+MC<- geary.mc(regions_json@data$r_Age, lw, nsim=599)
+MC
+```
+[Further Examples using Geary's C](https://rstudio-pubs-static.s3.amazonaws.com/223305_944ddc517306448f8fb0d60ca29dd94b.html)
+
+## Getis and Ord's G
+
+At this point I have considered two global measures. These can be extended and calculated on a smaller subset to produce local measures. However, an intrinsically local measure is Getis and Ord's $G$, which gives an indication of clusters based on their values:
+
+$$
+G=\frac{\sum_{i=1} \sum_{j=1} w_{i, j} x_{i} x_{j}}{\sum_{i=1} \sum_{j=1} x_{i} x_{j}}
+$$
+
+where the number spatial units indexed by ${\displaystyle i}$ i and ${\displaystyle j}$ j  
+${\displaystyle x}$ is the variable of interest    
+${\displaystyle w_{ij}}$ is a matrix of spatial weights with zeroes on the diagonal (i.e., ${\displaystyle w_{ii}=0}$ ${\displaystyle w_{ii}=0}$) 
+
+Notice, that in the above units are considered relative to each other and their relationship (ie. weights) only. Getis and Ord's $G$ is useful for identifying clusters based on their values, low or high, and is therefore good for identifying hotspots.   
+
+[You can see worked $G$ example here.](https://crd150.github.io/lab5.html)
+
+Finally, for consistency, I will just mention a final measure **Ripleys's K**. This is a descriptive spatial statistic that shows autocorrelation based on multiple distance bands. It is different from all the above because it is not being strictly bound to the whole system or just a units' local neighbours, and so is useful to see how spatial patterns change with scale. Dr. David Murrel will go over this shortly.
+
+**Thus, we have an overview of the core descriptive spatial statistics.**
+
+------------------------------------------------
+
+# Gravity Models 
+
+Gravity models are used for estimating movements between two places. These have be used in the context of migration and in transport for trip estimations. Given the wide range of applications, you can guess that this is a big topic with many variations on it. What all of these have in common, is that they are based on Newton's law of gravitation:
+
+$$
+F_{i j}=G \frac{M_{i} M_{j}}{D_{i j}^{2}}
+$$
+where $M_{i}$ and $M_{j}$ are the mass of two objects
+${\displaystyle G}$ is a constant that denotes gravitational pull    
+${D_{i j}}$ is the distance between the two objects
+
+For movement modelling, Newton's force is adapted to describe the flow between two places. Masses are replaced by area characteristics: where you have some constant multiplied by some observations at the origins $V_{i}^{\mu}$ and at the destinations $W_{j}^{\alpha}$. In the numerator you have distance, which basically says that the force diminishes over space. 
+
+$$
+T_{i j}= \frac{V_{i}^{\mu} W_{j}^{\omega}}{d_{i j}^{\beta}}
+$$
+
+
+
+${D_{i j}}$ generally looks like a power:
+$$
+f\left(d_{i j}\right)=d_{i j}^{\mathcal{B}}
+$$
+Or exponential function:
+
+$$
+f\left(d_{i j}\right)=\exp \left(\beta d_{i j}\right)
+$$
+The shape and choice of the constant $\beta$ will depend on how much value you give to proximity in predicting flows. 
+Assuming we choose an exponential function, the unconstrainted Gravity equations can be expressed as:
+
+$$
+T_{i j}=V_{i}^{\mu} W_{j}^{\alpha} f\left(d_{i j}\right)
+$$
+or more conveniently (assuming an exponential distance function) as:
+$$
+\ln T_{i j}=k+\mu \ln V_{i}+\alpha \ln W_{j}-\beta d_{i j}
+$$
+Which can be modelled as a log-linear regression model. The choice of origin variables which would make it 'emissive' or destination variables with would make places 'attractive' is context dependent. However, what all Gravity Models have in common is the need to describe distance between two places (most commonly Euclidean).
+
+
+#### Getting Distance
+```{r}
+crs(regions_json)
+```
+Firstly to get the distance, we need to check our coordinate system. A common mistake is to happily calculate the distance between polygons without verifying units. It is a dangerous one because in relative terms, the distances might look alright, but they won't correspond to practical world measures. See a baseline for the UK below:  
+
+
+![](./Distance_sanity.png)
+
+Conveniently, for the BNG projection in the UK, Euclidean distance maps to meters.
+```{r}
+#this is the BNG: CRS("+init=epsg:27700")
+regions_json <-spTransform(regions_json, CRS("+init=epsg:27700"))
+dist_m <- spDists(regions_json)
+colnames(dist_m) <- regions_json$rgn15cd
+rownames(dist_m) <- regions_json$rgn15cd
+kable(dist_m)
+```
+
+For further use, you can convert the distances into list form.
+```{r}
+#tranform the nxn matrix into a pairs list with nxn rows:
+dist_pl <- melt(dist_m)
+names(dist_pl) <- c('Origin','Destination','Distance_m2')
+kable(head(dist_pl))
+```
+
+With the theoretical grounding and distance calculation example from above you have all you need to explore different families of gravity models. The most basic is the unconstrained (log-linear Poisson regression model) version as mentioned above.
+
+
+```{r O_D_data}
+od <- c("USUAL_RESIDENCE_NAME","USUAL_RESIDENCE_CODE", "PLACE_OF_WORK_NAME","PLACE_OF_WORK_CODE", "AGE_NAME","OBS_VALUE")
+t_wu02Ew_od <-t_wu02Ew[,od]
+t_wu02Ew_od <-t_wu02Ew_od[t_wu02Ew$AGE_NAME %in% retired,] #get those "Aged 65-74", "Aged 75+"
+
+t_wu02Ew_od <- aggregate(. ~USUAL_RESIDENCE_CODE + PLACE_OF_WORK_CODE + USUAL_RESIDENCE_NAME + PLACE_OF_WORK_NAME, data=t_wu02Ew_od, sum, na.rm=TRUE)
+t_wu02Ew_od$AGE_NAME <- NULL
+```
+
+```{r}
+kable(t_wu02Ew_od[1:20,])
+```
+
+Of these, we can get the total flows emitted from every origin $O_i$ and equivalently the arriving at $D_j$:  
+```{r}
+sum_dest <-  aggregate(t_wu02Ew_od$OBS_VALUE,
+                by = list(t_wu02Ew_od$USUAL_RESIDENCE_CODE),
+                FUN = sum)
+names(sum_dest) <- c('Destination','Dj')
+
+sum_orig <-  aggregate(t_wu02Ew_od$OBS_VALUE,
+                by = list(t_wu02Ew_od$PLACE_OF_WORK_CODE),
+                FUN = sum)
+names(sum_orig) <- c('Origin','Oi')
+```
+
+
+Bring all the above together we get:   
+
+```{r}
+t_wu02Ew_od <- merge(t_wu02Ew_od, dist_pl, by.x=c("USUAL_RESIDENCE_CODE", "PLACE_OF_WORK_CODE"), by.y=c("Origin", "Destination"))
+
+t_wu02Ew_od <- rbind(t_wu02Ew_od, sum_dest[sum_dest$Origin %in% t_wu02Ew_od$PLACE_OF_WORK_CODE])
+t_wu02Ew_od <- merge(t_wu02Ew_od, sum_dest, by.x="PLACE_OF_WORK_CODE", by.y= "Destination")
+t_wu02Ew_od <- merge(t_wu02Ew_od, sum_orig, by.x="USUAL_RESIDENCE_CODE", by.y= "Origin")
+```
+
+```{r}
+kable(head(t_wu02Ew_od))
+```
+Run the model:  
+
+```{r}
+#do not consider within flows
+t_wu02Ew_od <- t_wu02Ew_od[t_wu02Ew_od$Distance_m2 != 0,]
+
+#note: I have not applied a function to penalise for increasing distance. This is just for simplicity of the example
+unconstrained_gm <- glm(OBS_VALUE ~ log(Oi)+log(Dj)+log(Distance_m2), na.action = na.exclude, family = poisson(link = "log"), data = t_wu02Ew_od)
+#let's have a look at it's summary...
+summary(unconstrained_gm)
+```
+
+```{r}
+rsq(unconstrained_gm)
+```
+
+Given that the data is in matrix form, there are ways of taking into account the row and column totals to calibrate the model. At a higher level, these are a ratio (or percent) for each cell, which takes into account the differences between the observed row, **then** column totals compared to what we would get if we only considered the distance (or more generally cost) associated with that particular type of flow. Note, I say flow, not cell, because we can assume that the cost of moving from some groups of places might be associated with the same cost and would therefore use the same calibrating ratio.
+
+[Wolwe, Buragard and Breisslein](https://www.ajs.or.at/index.php/ajs/article/view/688/635) go into this in more detail, whilst discussing fairly new R package for trade gravity modelling.
+
+Further reading:
+[Gravity models of Trade in R](https://www.ajs.or.at/index.php/ajs/article/view/688/635)     
+[Unconstrained Model of Migration](https://rpubs.com/adam_dennett/257231)
