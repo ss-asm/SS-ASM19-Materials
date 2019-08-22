@@ -4,6 +4,7 @@ author: 'T. Ahaha, Y. Blahlah, U. Coocoo, J. Dayhay and J. Zoobie'
 date: "August 22, 2019"
 output: html_document
 ---
+*Suggestion: Do author order by alphabetical surname. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -12,8 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## *Mission:* **Clean Growth**
 Choose from: Ageing Society / Clean Growth / AI and Data Economy / Future of Mobility
-
-*Recommendation:* **E.g Reduce gray energry in new builds by using prefabricated elements created in designated areas based on expected building need.**
 
 *Stakeholder:* Whose call is addressing this issue? If you say government, be specific about which department. If you say industry, say specifically which sector. Ideally also state in one sentence why.
 
@@ -25,10 +24,17 @@ If you need to cite for context, don't waste time on bibliography, add an html l
 
 ## Context
 ```{r libs message=FALSE, warning=FALSE}
+#USe tools as you need to. 
+#Some in the teams has experience running pythong with R if you are more comfy with that.
+
 #Ploty is nice to use, but screenshot from excell with do too. 
 library(plotly)
+library(circlize)
+library(knitr)
+library(geojsonio)
+library(sp)
+library(tmap)
 ```
-
 
 Your figures/tables.
 
@@ -36,8 +42,8 @@ Dataset you used to approach this problem. What data is available to measure pro
 
 *Suggestion: Do a broadsweep of the situation first.*
 ```{r cars}
-x = c("Stage 1","Stage 2","Stage 2","Stage 2", "Stage 2")
-y = c("5","10","3","10","5")
+x = c("Stage 1","Stage 2","Stage 3","Stage 4", "Stage 5")
+y = c("15","10","3","17","5")
 
 p <- plot_ly(y=y, x=x, histfunc='sum', type = "histogram") %>%
   layout(
@@ -50,8 +56,56 @@ p
 Caveat to keep in mind: Reported by Bonnie once, August 2019.
 
 
-*Suggestion: Then get specific with an example.*
-```{r pressure, echo=FALSE}
-plot(pressure)
+*Suggestion: Then get specific with a spatial example.*
+```{r pressure}
+#Feel free to use downloaded data. 
+#Opening csvs: http://rprogramming.net/read-csv-in-r/
+#Loading excels: https://www.rdocumentation.org/packages/openxlsx/versions/4.1.0.1/topics/read.xlsx
+
+
+regions_json <- geojson_read("https://opendata.arcgis.com/datasets/8d3a9e6e7bd445e2bdcc26cdf007eac7_1.geojson", what = "sp")
+
+t_wu02Ew  <- read.csv(file = "https://www.nomisweb.co.uk/api/v01/dataset/NM_1206_1.data.csv?date=latest&usual_residence=2013265921...2013265930&place_of_work=2013265921...2013265930&age=0...6&measures=20100", header=TRUE)
+
+reg_var <- xtabs(OBS_VALUE ~ USUAL_RESIDENCE_CODE + AGE_NAME, data=t_wu02Ew)
+reg_var <- as.data.frame.matrix(reg_var) 
+
+retired <- c("Aged 65-74", "Aged 75+" )
+reg_var$w_Age <- rowSums(reg_var[,!names(reg_var) %in% retired])
+reg_var$r_Age <- rowSums(reg_var[,retired])
+names(reg_var) <- c("USUAL_RESIDENCE_CODE")
+
+#This from Bonnie's Tutorial
+#More tmap power here: https://cran.r-project.org/web/packages/tmap/vignettes/tmap-getstarted.html
+
+regions_json@data <- merge(regions_json@data, reg_var, by.x= "rgn15cd", by.y=0 )
+
+tmap_mode("view")
+tm_shape(regions_json) + tm_polygons(col="r_Age")
 ```
+
+
+## Your recommendation
+
+This will be very group dependent. Use what you need to get your point across. But whatever you do, summarise your recommendation in 1 sentence. 
+
+*General Recommendation:* **E.g Reduce gray energry in new builds by using prefabricated elements created in designated areas based on expected building need.**
+
+* Why is this a good idea?
+ + sub-item 1
+ + sub-item 2 
+ 
+ * What are the caveats?
+ + sub-item 1
+ + sub-item 2 
+ 
+
+*Data Recommendation:* **Collect machine readable specifications of production and origin of shipping for all prefabricated elements. Specification should include total mass of coal use.**
+
+Talk about why you have chosen to throw money at this in particular. Is it particularly easy to do?
+
+*Ethics :* **Although buildings use more enegery when in use, the choice of this recommendation was made because it would also lower energy costs, whilst avoiding the collection of sensititve building level data.**
+
+## Further Notes for Discussion
+Include any cool stuff you found revelant.
 
