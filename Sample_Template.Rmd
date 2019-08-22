@@ -9,12 +9,12 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-*Title:* This Template is further to the [briefing](https://docs.google.com/document/d/19l5ETeXW6ewFeC7ED96DAxnq7TOJkGgpuzvlKCosNZk/edit#) Please do alphabetical order by surname.
+**Title:** This Template is further to the [briefing](https://docs.google.com/document/d/19l5ETeXW6ewFeC7ED96DAxnq7TOJkGgpuzvlKCosNZk/edit#) Please do alphabetical order by surname.
 
-## *Mission:* **Clean Growth**
-Choose from: Ageing Society / Clean Growth / AI and Data Economy / Future of Mobility
+## **Mission: *Team's Mission* **
+**Choose from: Ageing Society / Clean Growth / AI and Data Economy / Future of Mobility**
 
-*Stakeholder:* Whose call is addressing this issue? If you say government, be specific about which department. If you say industry, say specifically which sector. Ideally also state in one sentence why.
+**Stakeholder:** Whose call is addressing this issue? If you say government, be specific about which department. If you say industry, say specifically which sector. Ideally also state in one sentence why.
 
 How is your analysis related to your theme?
 What is your research question? 
@@ -34,11 +34,20 @@ library(sp)
 library(tmap)
 ```
 
-Your figures/tables.
 
-Dataset you used to approach this problem. What data is available to measure progress on your problem? See [Zara's notebook](https://github.com/ss-asm/SS-ASM19-Materials/blob/master/Statistics/Statistics%201%20Zara%20Shabrina.Rmd) from the first day. Provide tables or figures from these datasets that tell us something about your challenge.
+## Datasets
 
-*Suggestion: Do a broadsweep of the situation first.*
+Datasets you used to approach this problem. 
+
+What data is available to measure progress on your problem?
+
+
+## Analysis
+
+**Suggestion: Do a broadsweep of the situation first.**
+
+See [Zara's notebook](https://github.com/ss-asm/SS-ASM19-Materials/blob/master/Statistics/Statistics%201%20Zara%20Shabrina.Rmd) from the first day. Provide tables or figures from these datasets that tell us something about your challenge.
+
 ```{r cars}
 x = c("Stage 1","Stage 2","Stage 3","Stage 4", "Stage 5")
 y = c("15","10","3","17","5")
@@ -53,7 +62,7 @@ p
 [Source:](https://plot.ly/create/?fid=RPlotBot:5278#/)
 Caveat to keep in mind: Reported by Bonnie once, August 2019.
 
-*Suggestion: Then get specific with a spatial example.*
+**Suggestion: Then get specific with spatial analysis and modelling**
 ```{r }
 #Feel free to use downloaded data. 
 #Opening csvs: http://rprogramming.net/read-csv-in-r/
@@ -84,7 +93,7 @@ tm_shape(regions_json) + tm_polygons(col="Relevant Stuff")
 
 This will be very group dependent. Use what you need to get your point across. But whatever you do, summarise your recommendation in 1 sentence. 
 
-*General Recommendation:* **E.g Reduce gray energry in new builds by using prefabricated elements created in designated areas based on expected building need.**
+**General Recommendation:** *E.g Reduce gray energry in new builds by using prefabricated elements created in designated areas based on expected building need.*
 
 * Why is this a good idea?
    + sub-item 1
@@ -95,11 +104,11 @@ This will be very group dependent. Use what you need to get your point across. B
    + sub-item 2 
  
 
-*Data Recommendation:* **Collect machine readable specifications of production and origin of shipping for all prefabricated elements. Specification should include total mass of coal use.**
+**Data Recommendation:** *Collect machine readable specifications of production and origin of shipping for all prefabricated elements. Specification should include total mass of coal use.*
 
 Talk about why you have chosen to throw money at this in particular. Is it particularly easy to do?
 
-*Ethics :* **Although buildings use more enegery when in use, the choice of this recommendation was made because it would also lower energy costs, whilst avoiding the collection of sensititve building level data.**
+**Ethics :** *Although buildings use more enegery when in use, the choice of this recommendation was made because it would also lower energy costs, whilst avoiding the collection of sensititve building level data.*
 
 ## Further Notes for Discussion
 Include any cool stuff you found revelant.
