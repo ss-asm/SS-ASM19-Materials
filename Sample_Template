@@ -1,0 +1,57 @@
+---
+title: "Hackathon Template"
+author: 'T. Ahaha, Y. Blahlah, U. Coocoo, J. Dayhay and J. Zoobie'
+date: "August 22, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+*Title:* This Template is further to the [briefing](https://docs.google.com/document/d/19l5ETeXW6ewFeC7ED96DAxnq7TOJkGgpuzvlKCosNZk/edit#) Please do alphabetical order by surname.
+
+## *Mission:* **Clean Growth**
+Choose from: Ageing Society / Clean Growth / AI and Data Economy / Future of Mobility
+
+*Recommendation:* **E.g Reduce gray energry in new builds by using prefabricated elements created in designated areas based on expected building need.**
+
+*Stakeholder:* Whose call is addressing this issue? If you say government, be specific about which department. If you say industry, say specifically which sector. Ideally also state in one sentence why.
+
+How is your analysis related to your theme?
+What is your research question? 
+If you need to cite for context, don't waste time on bibliography, add an html link.
+
+
+
+## Context
+```{r libs message=FALSE, warning=FALSE}
+#Ploty is nice to use, but screenshot from excell with do too. 
+library(plotly)
+```
+
+
+Your figures/tables.
+
+Dataset you used to approach this problem. What data is available to measure progress on your problem? See [Zara's notebook](https://github.com/ss-asm/SS-ASM19-Materials/blob/master/Statistics/Statistics%201%20Zara%20Shabrina.Rmd) from the first day. Provide tables or figures from these datasets that tell us something about your challenge.
+
+*Suggestion: Do a broadsweep of the situation first.*
+```{r cars}
+x = c("Stage 1","Stage 2","Stage 2","Stage 2", "Stage 2")
+y = c("5","10","3","10","5")
+
+p <- plot_ly(y=y, x=x, histfunc='sum', type = "histogram") %>%
+  layout(
+    title = "Bogus Buiding Cycle Descriptive Stat",
+    yaxis=list(type='linear'))
+
+p
+```
+[Source:](https://plot.ly/create/?fid=RPlotBot:5278#/)
+Caveat to keep in mind: Reported by Bonnie once, August 2019.
+
+
+*Suggestion: Then get specific with an example.*
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
