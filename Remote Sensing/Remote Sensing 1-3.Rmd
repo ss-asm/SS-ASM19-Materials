@@ -521,10 +521,10 @@ for (i in 2:dim(cl)[1]){
 
 ### Show training sites distribution (white crosses)
 ```{r error=TRUE}
-# detach('package:tidyr')
-# detach('package:tidyverse')
-# detach('package:plotly')
-# detach('package:ggplot2')
+detach('package:tidyr')
+detach('package:tidyverse')
+detach('package:plotly')
+detach('package:ggplot2')
 
 plt <- levelplot(lcm_rat, col.regions = col_vector[u_val], main = 'Training Sites')
 print(plt + layer(sp.points(samp, pch = 3, cex = 0.5, col = "white")))
