@@ -1,0 +1,78 @@
+---
+title: "The Future of Mobility - Team E"
+author: 'T. Guerrero, L. Liao, T. Throndsen, H. Wong and O. Zamudio'
+date: "August 23, 2019"
+output: html_document
+---
+
+**Title:** Identify transport poverty and spatial mismatch areas in London
+
+**Mission: Future of Mobility**
+
+The national industrial strategy puts a great emphasise on mobility based on private vehicles, promoting  energy efficient alternatives that reduce accident rate by the introduction of self-driving technologies. This view on the future of mobility, however, disregards other modes of transport, such as public transport and cycling, which could help reduce the demand on private vehicle usage.
+
+*"Put the UK at the forefront of the design and manufacturing of zero emission vehicles, with all new cars and vans effectively zero emission by 2040"*
+
+In London, there are several measures taking place to reduce car usage, like the Ultra Low Emission Zone in London, and a highly subsidised public transport network. However, these measures do not fully encompass issues regarding inequality on access to services among the population.
+
+**How can we ensure that the future of mobility is inclusive to all the population, not only in terms of physical accesibility but in terms of affordability?**
+
+This exercise uses data on the Index of Deprivation to identify the areas of potential need for transport infrastructure networks expansion. This dataset, is compared to existing transport nodes, and car ownerwhip rates and origin-destination datasets. It shows potential hotspots where investment in public transport should be prioritised. Before talking of technological advancement in the automotive industry, it is important to ensure mobility is accessible and affordable for all.
+
+**Stakeholder:** 
+* National government, eg Department of Transport in the UK
+* Local autorities which, in the case of this example, include Greater London Authority (GLA) and Transport for London (TfL).
+
+
+## Datasets
+
+* Index of Multiple Deprivation 2015 by LSOA
+
+* Underground, overground and rail station location from TfL 2018
+
+* Origin Destination travel flows from the 2011 Census Data
+
+* Public Transport Accessibility Level from TfL 2015
+
+* 
+## Analysis
+
+1. Analyse data on deprivation and if it has a clustering efect
+
+Spatial autocorrelation (Moran's I) for the Multiple Index of Deprivation 2015: ![](images/IMD_Moran.png)
+
+Regression betwwn Multiple Index of Deprivation 2015 and PTLA and no-car ownership: ![](images/reg.jpg)
+
+2. Multiple Index of Deprivation 2015 and Areas that use bus as means of transport to work: ![](images/imd.bus.png)
+
+3. Areas within 10 min access of public transportation: ![](images/iso.jpg)
+
+4. Deprivation index and IMD: ![](images/tot.png)
+
+## Your recommendation
+
+**General Recommendation:** 
+
+Access to affordable and available transport should be considered as a domain in the local deprivation measure
+
+** Why is this a good idea?**
+Demonstrating through London
++ the travel time and costs are major factors affecting where people work and where they can access key services and facilities
++ areas with poorer PT accessibility are more likely to be deprived, and they have lower car ownership, residents travel shorter distance to work compared to average across the city
++ if car travel is to be discouraged, people would need PT alternatives that connect them to more other locations with reasonable travel time and at affordable cost
++ the UK and London have a lot of detail data on transport use, it would be great to be able to replicate the analysis to other cities and countries
+
+ ** What are the caveats?**
++ cars... they are not going to go away soon (autonomous or not, zero-emission or not), but people should feel like they have alternatives to cars
++ land use and commuting patterns will change. businesses are moving away from 9-5 at fixed locations to more flexible working patterns and locations. local authorities can influence the local land use planning by encouraging more local employment. do away with CBD, there should be more LBD and local communities
+
+
+**Data Recommendation:** 
++ journey time data is hard to get, need more origin-destination data at LSOA level
++ travel costs is even harder, London has a zonal fare system, but different modes have different fares and harder to compare the tradeoff between journey time and costs of travel
++ data spatial granaularity (LSOA level)
++ free and democratic use of API, especially routeing engine, needed access to API or lots of data scraping
+
+
+## Further Notes for Discussion
+This is a preliminary analysis, but a lot more work can be done to improve the results.

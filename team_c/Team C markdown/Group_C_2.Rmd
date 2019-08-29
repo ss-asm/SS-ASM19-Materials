@@ -1,0 +1,279 @@
+---
+title: "Team C - Identification of clean housing opportunities"
+author: 'S. Almasi, V. Fernandes, J. Murphy, A. Stanitsa, and L. Xiaoming'
+date: "August 23, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+**Title:** Group C - Energy Use TBC
+
+## **Mission: *"halve the energy use of new buildings by 2030"* **
+**Clean Growth**
+
+**Stakeholder:** HM Government: Department for Business, Energy & Industrial Strategy.
+
+
+
+Research question
+
+
+How is your analysis related to your theme?
+Analysis looked to compare housing distribution, 
+
+
+
+What is your research question? 
+As part of the industrial Strategy - Clean Growth Grand Challenge there has been a call for the construction industry to reduce whole life cost for assets by 33%, greenhouse gas emission by 50% to drive the UK construction industry as a global leader in clean growth. 
+
+## Context
+```{r message=FALSE, warning=FALSE}
+#Use tools as you need to. 
+#Some in the teams has experience running python with R if you are more comfy with that.
+
+#Ploty is nice to use, but screenshot from excell with do too. 
+library(plotly)
+#library(circlize)
+library(knitr)
+library(geojsonio)
+library(sp)
+library(tmap)
+```
+
+
+## Datasets
+
+Datasets you used:  
+Building efficiency - EPC ratings - https://www.gov.uk/government/statistical-data-sets/live-tables-on-energy-performance-of-buildings-certificates
+London Energy Map project - CSE - https://www.cse.org.uk/projects/view/1259#Energy_consumption_data__domestic_
+London Postcodes - Doogal - https://www.doogal.co.uk/london_postcodes.php
+
+
+What data is available to measure progress on your problem?
+
+
+## Tools 
+R
+QGIS
+Python 
+
+
+
+## Analysis
+
+
+
+##1. Housing distribution
+# Clustering of High Energy Consumption - Spatial Statistics
+
+First, we had a look at the spatial distribution of residential electricity consumption across London. 
+
+![Admin](.\img\Electricity consumption.png) # Add electricity consumption map
+
+The map shows that there appears to be a concentration of high-consuming regions in central London.
+
+The first thought that comes to mind is that this is a function of housing density: more populated areas consume more electricity because there are more houses.
+
+![Admin](.\img\NumHousehold.png) # Add housing density map
+```{r error=TRUE}
+library(plotly) # Interactive visualisation
+data <- read.csv("./Test.csv")
+
+
+#saveRDS(object, file = "my_data.rds")
+# Restore the object
+#readRDS(file = "my_data.rds")
+
+#colnames(data) <- c("colum1name", "column2name")
+f <- list(
+  family = "Courier New, monospace",
+  size = 14,
+  color = "#7f7f7f"
+)
+
+x <- list(
+  title = "Number of Households with at least one user",
+  titlefont = f
+)
+y <- list(
+  #nticks = 10,
+  #domain = c(0, 90000000),
+  #range = c(0,80000000),
+  title = "Total domestic electricity consumption (kWh)",
+  titlefont = f
+  )
+
+scatter <- plot_ly(
+  data, x = ~Households_Least_One, y = ~Electricity,
+  type="scatter", mode="markers",
+  color=~Electricity, size=~Households_Least_One)  %>%
+  layout(xaxis = x, yaxis = y)
+
+#layout(yaxis = list(title ="All Households"), xaxis = list(title ="Total domestic electricity consumption (kWh)")
+
+scatter
+
+#htmlwidgets::saveWidget(as.widget(p), "test.html")
+
+```
+
+
+Checking the housing density (map) and comparing it to the electricity consumption (scatter plot), we find that that three is no relationship i.e. the regions of high electricity consumption are real.
+
+The second thought is whether the apparent clustering of high electricity consumption regions is real, and not just our eyes plating tricks. We defined "high domestic electricity consumption" as > 3.5 million kWh.
+
+![Admin](.\img\hcons_dist.png)
+
+After selecting the regions that fit this criteria, we used Ripley's K function to find whether (A) we had clustering and (B) the approximate size of the clustering. Care was taken to make sure the data was transformed from Mercator to Lamberts Equal Area Projection.
+
+We tested our distribution against a null hypothesis (random distribution) and found that the data is indeed clustered (i.e. has an inhomogeneous distribution). This shows up well in a kernel density plot of the points.
+
+![Admin](.\img\k-means_nulltest.png)
+![Admin](.\img\kernel_density.png)
+
+I then used an L function to examine the radius over which this clustering was significant, which is approximately ~2.5 km.
+
+![Admin](.\img\Kmeans_radius.png)
+
+The conclusion from this analysis is that houses with high electricity consumption is indeed clustered, and this is not a function of housing density. We then looked to explore other factors that might be determining this clustering.
+
+
+
+
+
+
+
+First, we had a look at the spatial distribution of residential electricity consumption across London. 
+
+![Admin](.\img\) # Add electricity consumption map
+
+The map shows that there appears to be a concentration of high-consuming regions in central London.
+
+
+##3. Fuel poverty v income
+
+![Admin](.\img\Income.png) # 
+
+![Admin](.\img\Electricity consumption.png) # 
+
+![Admin](.\img\incomeVsConsumption (1).jpg)
+
+##4. Income  and consumption
+
+![Admin](.\img\fuel_poverty_Proportion of households fuel poor (_)_LSOA.png) # Add electricity consumption map
+
+![Admin](.\img\Income.png) # Add electricity consumption map
+
+```{r error=TRUE}
+
+library(plotly) # Interactive visualisation
+data <- read.csv("./Fule povery London.csv")
+
+#saveRDS(object, file = "my_data.rds")
+# Restore the object
+#readRDS(file = "my_data.rds")
+
+#colnames(data) <- c("colum1name", "column2name")
+f <- list(
+  family = "Courier New, monospace",
+  size = 14,
+  color = "#7f7f7f"
+)
+
+x <- list(
+  title = "Number of Households with at least one user",
+  titlefont = f
+)
+y <- list(
+  #nticks = 10,
+  #domain = c(0, 90000000),
+  #range = c(0,80000000),
+  title = "Fuelpoor Households",
+  titlefont = f
+  )
+
+scatter <- plot_ly(
+  data, x = ~ households , y = ~fuelpoor_households,
+  type="scatter", mode="markers",
+  color=~ fuelpoor_households , size=~ households )  %>%
+  layout(xaxis = x, yaxis = y)
+
+#layout(yaxis = list(title ="All Households"), xaxis = list(title ="Total domestic electricity consumption (kWh)")
+
+scatter
+
+#htmlwidgets::saveWidget(as.widget(p), "test.html")
+
+```
+
+![Admin](.\img\mvariate (1).jpg) # Add electricity consumption map
+
+##5. Occupants v consuption
+
+![Admin](.\img\ElectrConsumNumHousehold.png) # Add electricity consumption map
+
+![Admin](.\img\housing status_One Person Household.png) # Add electricity consumption map
+
+
+
+##6. Type of ownership v consuption
+
+![Admin](.\img\Income.png) # Add electricity consumption map
+
+![Admin](.\img\perctSocialRt.png) # Add electricity consumption map
+
+##7. Age v consuption
+
+![Admin](.\img\Pre 1900.jpg) # Add electricity consumption map
+
+![Admin](.\img\2010- 2014.jpg) # Add electricity consumption map
+
+![Admin](.\img\ElectricityPre1900.png) # Add electricity consumption map
+
+##8.Floor area (sqm) Analysis
+
+
+## Floor Area vs. Current heating costs
+Trying to understand what the relationship between dwelling sizes and other factors.
+- Dataset: [Energy usage statistics (gas, electric)](https://epc.opendatacommunities.org/domestic/search)
+- How: Using Python and the API we loaded data and analysed it using python libraries
+- Example of API request:
+```
+url = "https://epc.opendatacommunities.org/api/v1/domestic/search?local-authority=E09000015"
+headers = {'Accept': 'application/json', 'Authorization': 'Basic c2lydmFuM3RyQGdtYWlsLmNvbToxYjZjMTFhZGFlNjliZWMyMmU5MzBhOGY4YzllNjdkOTViNTQ0ODll'}
+r = requests.get(url, headers=headers)
+```
+```{r error=TRUE}
+knitr::include_graphics("img/flrareavsheat.png")
+```
+
+- So what? We see that property internal areas might reveal factors that will impact future house building - e.g. typical dwelling sizes.
+
+
+## Floor area vs. Environmental impact
+- Dataset: [Energy usage statistics (gas, electric)](https://epc.opendatacommunities.org/domestic/search)
+- How: Using Python and the API we loaded data and analysed it using python libraries
+```{r }
+knitr::include_graphics("img/floorareavsenvimpact.png")
+```
+
+
+## Your recommendation
+
+Invest in existing building stock - retrofit all existing with smartmeters to allow for more accurate datasets 
+
+Ownership influences usage and poverty values - 
+
+
+**General Recommendation:** *E.g Reduce gray energry in new builds by using prefabricated elements created in designated areas based on expected building need.*
+
+
+
+**Ethics :** *Although buildings use more energy when in use, the choice of this recommendation was made because it would also lower energy costs, whilst avoiding the collection of sensititve building level data.*
+
+## Further Notes for Discussion
+Include any cool stuff you found revelant.
+Construction sector deal - https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/731871/construction-sector-deal-print-single.pdf?_ga=2.136256562.2056560497.1566385009-1704179078.1558520267
+Industrial Strategy - https://www.gov.uk/government/topical-events/the-uks-industrial-strategy
