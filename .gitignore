@@ -1,6 +1,7 @@
 /Remote Sensing/data/*
 !/Remote Sensing/data/Remote Sensing Data Info
 .Rproj.user
+.Rhistory
 /Remote Sensing/.Rhistory
 /Hackathon Sumbissions/team_a/data/lsoa.geojson
 /Hackathon Sumbissions/team_a/.Rhistory
