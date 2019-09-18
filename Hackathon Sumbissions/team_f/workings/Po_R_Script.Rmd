@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+Jun=read.csv("con_18_Jun.csv")
+```
+
+```{r}
+library(xlsx)
+```
+
+```{r}
+Jun_mean <- aggregate(Jun, by=list(Jun$lsoa11cd), FUN=mean)
+write.csv(Jun_mean,"result/Jun_mean.csv")
+```
+
+```{r}
+Jan=read.csv("con_18_Jan.csv")
+```
+
+```{r}
+Jan_mean <- aggregate(Jun, by=list(Jun$lsoa11cd), FUN=mean)
+write.csv(Jan_mean,"result/Jan_mean.csv")
+```
+
+```{r}
+energy=read.csv("energy.csv")
+```
+
+```{r}
+linearMod <- lm(TNit_Jan18 ~ CURRENT_ENERGY_EFFICIENCY+ENVIRONMENT_IMPACT_CURRENT+ENERGY_CONSUMPTION_CURRENT+CO2_EMISSIONS_CURRENT+LIGHTING_COST_CURRENT+HEATING_COST_CURRENT+HOT_WATER_COST_CURRENT+TLSOA_ElecMean+TLSOA_GasMean+TAgePre2000+TTotalBldngs+TAgePost2000, data=energy)
+summary(linearMod)
+```
+
+```{r}
+linearMod <- lm(TDay_Jun18 ~ JunCURRENT_ENERGY_EFFICIENCY+JunENVIRONMENT_IMPACT_CURRENT+JunENERGY_CONSUMPTION_CURRENT+JunCO2_EMISSIONS_CURRENT+JunLIGHTING_COST_CURRENT+JunHEATING_COST_CURRENT+JunHOT_WATER_COST_CURRENT+TLSOA_ElecMean+TLSOA_GasMean+TAgePre2000+TTotalBldngs+TAgePost2000, data=energy)
+summary(linearMod)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
